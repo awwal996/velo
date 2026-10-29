@@ -152,24 +152,35 @@ async function getConversation(conversationId) {
 
 async function listConversations(sessionId, limit = 50) {
   if (!supabase) return [];
-  
+
   try {
     const { data, error } = await supabase
       .from('conversations')
-      .select('*')
+      .select('conversation_id, session_id, title, created_at, updated_at')
       .eq('session_id', sessionId)
       .eq('is_active', true)
-      .is('deleted_at', null)
       .order('updated_at', { ascending: false })
       .limit(limit);
-    
-    if (error) throw error;
-    return data || [];
+
+    if (error) {
+      console.error('List conversations error:', error.message);
+      return [];
+    }
+
+    // Transform to frontend-friendly format
+    return (data || []).map(conv => ({
+      id: conv.conversation_id,
+      session_id: conv.session_id,
+      title: conv.title || 'New conversation',
+      created_at: conv.created_at,
+      updated_at: conv.updated_at
+    }));
   } catch (err) {
     console.error('List conversations error:', err.message);
     return [];
   }
 }
+
 
 async function deleteConversation(conversationId) {
   if (!supabase) return true;
