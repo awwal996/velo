@@ -10,6 +10,10 @@ const ORIGIN = process.env.FRONTEND_ORIGIN || '*';
 db.initDatabase();
 
 const app = express();
+
+// Trust proxy for Render deployment
+app.set('trust proxy', 1);
+
 app.use(cors({ origin: ORIGIN === '*' ? '*' : ORIGIN.split(',').map(o => o.trim()) }));
 app.use(express.json({ limit: '50kb' }));
 
