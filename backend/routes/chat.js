@@ -33,62 +33,62 @@ router.post('/', async (req, res) => {
 });
 
 // GET /api/chat/conversations — list conversations for session
-router.get('/conversations', (req, res) => {
+router.get('/conversations', async (req, res) => {
   const sessionId = req.query.session_id;
   if (!sessionId) return res.status(400).json({ error: 'session_id required.' });
-  const convs = db.listConversations(sessionId);
+  const convs = await db.listConversations(sessionId);
   res.json({ conversations: convs });
 });
 
 // GET /api/chat/conversations/:id/messages — get messages
-router.get('/conversations/:id/messages', (req, res) => {
+router.get('/conversations/:id/messages', async (req, res) => {
   const sessionId = req.query.session_id;
   if (!sessionId) return res.status(400).json({ error: 'session_id required.' });
-  const conv = db.getConversation(req.params.id);
+  const conv = await db.getConversation(req.params.id);
   if (!conv || conv.session_id !== sessionId)
     return res.status(404).json({ error: 'Conversation not found.' });
-  const messages = db.getMessages(req.params.id);
+  const messages = await db.getMessages(req.params.id);
   res.json({ messages });
 });
 
 // DELETE /api/chat/conversations/:id — delete conversation
-router.delete('/conversations/:id', (req, res) => {
+router.delete('/conversations/:id', async (req, res) => {
   const sessionId = req.query.session_id;
   if (!sessionId) return res.status(400).json({ error: 'session_id required.' });
-  db.deleteConversation(req.params.id, sessionId);
+  await db.deleteConversation(req.params.id, sessionId);
   res.json({ ok: true });
 });
 
 // GET /api/chat/memories — get memories for session
-router.get('/memories', (req, res) => {
+router.get('/memories', async (req, res) => {
   const sessionId = req.query.session_id;
   if (!sessionId) return res.status(400).json({ error: 'session_id required.' });
-  const memories = db.getMemories(sessionId);
+  const memories = await db.getMemories(sessionId);
   res.json({ memories });
 });
 
 // PATCH /api/chat/memories/:id — update a memory
-router.patch('/memories/:id', (req, res) => {
+router.patch('/memories/:id', async (req, res) => {
   const { session_id, content } = req.body;
   if (!session_id || !content)
     return res.status(400).json({ error: 'session_id and content required.' });
-  db.updateMemory(req.params.id, session_id, content);
+  await db.updateMemory(req.params.id, session_id, content);
   res.json({ ok: true });
 });
 
 // DELETE /api/chat/memories/:id — delete a memory
-router.delete('/memories/:id', (req, res) => {
+router.delete('/memories/:id', async (req, res) => {
   const sessionId = req.query.session_id;
   if (!sessionId) return res.status(400).json({ error: 'session_id required.' });
-  db.deleteMemory(req.params.id, sessionId);
+  await db.deleteMemory(req.params.id, sessionId);
   res.json({ ok: true });
 });
 
 // POST /api/chat/memories/clear — clear all memories
-router.post('/memories/clear', (req, res) => {
+router.post('/memories/clear', async (req, res) => {
   const { session_id } = req.body;
   if (!session_id) return res.status(400).json({ error: 'session_id required.' });
-  db.clearMemories(session_id);
+  await db.clearMemories(session_id);
   res.json({ ok: true });
 });
 
