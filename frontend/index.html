@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=5.0,user-scalable=yes,viewport-fit=cover"/>
 <title>Velo — Your Velontri Shopping Assistant</title>
 <meta name="description" content="Chat with Velo to find anything on Velontri marketplace — phones, cars, furniture, property and more."/>
-<meta name="theme-color" content="#2563EB"/>
+<meta name="theme-color" content="#4F46E5"/>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
 <meta http-equiv="Pragma" content="no-cache"/>
 <meta http-equiv="Expires" content="0"/>
@@ -15,38 +15,38 @@
 <style>
 :root {
   /* ══════════════════════════════════════════════════════════════
-     LIGHT MODE - Blue Theme
+     LIGHT MODE - Velontri Brand Colors
   ══════════════════════════════════════════════════════════════ */
-  --primary: #2563EB;        /* Vibrant Blue */
-  --primary-light: #3B82F6;  /* Light Blue */
-  --primary-dark: #1E40AF;   /* Dark Blue */
-  --primary-glow: rgba(37, 99, 235, 0.15);
-  --primary-soft: #EFF6FF;   /* Pale Blue */
+  --primary: #4F46E5;        /* Velontri Indigo */
+  --primary-light: #6366F1;  /* Light Indigo */
+  --primary-dark: #4338CA;   /* Dark Indigo */
+  --primary-glow: rgba(79, 70, 229, 0.15);
+  --primary-soft: rgba(79, 70, 229, 0.08);
   
   --accent: #8B5CF6;         /* Purple accent */
   --accent-light: #A78BFA;
   --accent-glow: rgba(139, 92, 246, 0.15);
   
-  --success: #10B981;        /* Green for success states */
-  --warning: #F59E0B;        /* Orange for warnings */
+  --success: #059669;        /* Green for success states */
+  --warning: #D97706;        /* Orange for warnings */
   --error: #EF4444;          /* Red for errors */
   --whatsapp: #25D366;       /* WhatsApp green */
   
-  /* Neutral colors */
-  --bg: #F8FAFC;
-  --bg-1: #FFFFFF;
-  --bg-2: #F1F5F9;
-  --bg-3: #E2E8F0;
-  --card: #FFFFFF;
-  --input: #FFFFFF;
+  /* Neutral colors - Clean white background */
+  --bg: #FFFFFF;             /* Pure white background */
+  --bg-1: #FFFFFF;           /* Pure white */
+  --bg-2: #F8F9FA;           /* Very light gray */
+  --bg-3: #F1F3F5;           /* Light gray */
+  --card: #FFFFFF;           /* Pure white cards */
+  --input: #FFFFFF;          /* Pure white inputs */
   
-  --border: #E2E8F0;
-  --border-medium: #CBD5E1;
-  --border-dark: #94A3B8;
+  --border: #E9ECEF;         /* Very light border */
+  --border-medium: #DEE2E6;  /* Light border */
+  --border-dark: #ADB5BD;    /* Medium border */
   
-  --text: #0F172A;
-  --text-secondary: #475569;
-  --text-tertiary: #94A3B8;
+  --text: #0a0a0a;           /* Almost black text */
+  --text-secondary: #495057; /* Gray text */
+  --text-tertiary: #868E96;  /* Light gray text */
   
   /* Shadows */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -68,38 +68,38 @@
 ══════════════════════════════════════════════════════════════ */
 @media (prefers-color-scheme: dark) {
   :root {
-    --primary: #3B82F6;
-    --primary-light: #60A5FA;
-    --primary-dark: #2563EB;
-    --primary-glow: rgba(59, 130, 246, 0.2);
-    --primary-soft: rgba(59, 130, 246, 0.1);
+    --primary: #6366F1;      /* Bright Indigo for dark mode */
+    --primary-light: #818CF8;
+    --primary-dark: #4F46E5;
+    --primary-glow: rgba(99, 102, 241, 0.25);
+    --primary-soft: rgba(99, 102, 241, 0.12);
     
     --accent: #A78BFA;
     --accent-light: #C4B5FD;
     --accent-glow: rgba(167, 139, 250, 0.2);
     
-    --success: #34D399;
-    --warning: #FBBF24;
+    --success: #10B981;
+    --warning: #F59E0B;
     --error: #F87171;
     --whatsapp: #25D366;
     
     /* Dark backgrounds */
-    --bg: #0F172A;
-    --bg-1: #1E293B;
-    --bg-2: #334155;
-    --bg-3: #475569;
-    --card: #1E293B;
-    --input: #334155;
+    --bg: #0a0a0a;
+    --bg-1: #1a1a1a;
+    --bg-2: #2a2a2a;
+    --bg-3: #3a3a3a;
+    --card: #1a1a1a;
+    --input: #2a2a2a;
     
     /* Dark borders */
-    --border: #334155;
-    --border-medium: #475569;
-    --border-dark: #64748B;
+    --border: #2a2a2a;
+    --border-medium: #3a3a3a;
+    --border-dark: #4a4a4a;
     
     /* Dark text */
-    --text: #F1F5F9;
-    --text-secondary: #CBD5E1;
-    --text-tertiary: #94A3B8;
+    --text: #F8F9FA;
+    --text-secondary: #ADB5BD;
+    --text-tertiary: #6C757D;
     
     /* Dark shadows - more subtle */
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
@@ -115,13 +115,13 @@
   
   /* Glassmorphism effect in dark mode */
   #header {
-    background: rgba(30, 41, 59, 0.8);
+    background: rgba(26, 26, 26, 0.8);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
   }
   
   .modal {
-    background: rgba(15, 23, 42, 0.8);
+    background: rgba(10, 10, 10, 0.8);
   }
 }
 
@@ -187,7 +187,7 @@ img {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -196,7 +196,7 @@ img {
 }
 #hamburger:hover { 
   background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
 }
 #hamburger span {
   width: 18px;
