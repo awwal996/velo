@@ -15,37 +15,37 @@ let supabase;
 function initDatabase() {
   const supabaseUrl = process.env.SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
-  
+
   if (!supabaseUrl || !supabaseKey) {
     console.warn('⚠️  Supabase credentials not found. Using in-memory fallback.');
     console.warn('   Set SUPABASE_URL and SUPABASE_SERVICE_KEY in .env file');
     return null;
   }
-  
+
   try {
     supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
       },
-      global: {
-        fetch: (...args) => {
-          // Add timeout to prevent hanging
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-          
-          return fetch(...args, { signal: controller.signal })
-            .finally(() => clearTimeout(timeout))
-            .catch(err => {
-              console.warn('⚠️  Supabase connection failed. Using in-memory fallback.');
-              supabase = null; // Disable supabase on connection failure
-              throw err;
-            });
-        }
+      db: {
+        schema: 'public'
       }
     });
-    
-    console.log('✅ Supabase client initialized (attempting connection...)');
+
+    console.log('✅ Supabase client initialized');
+    console.log('   URL:', supabaseUrl);
+
+    // Test connection
+    supabase.from('sessions').select('*').limit(1).then(({ data, error }) => {
+      if (error) {
+        console.error('❌ Supabase test query failed:', error.message);
+        supabase = null;
+      } else {
+        console.log('✅ Supabase connection verified');
+      }
+    });
+
     return supabase;
   } catch (err) {
     console.warn('⚠️  Supabase init failed:', err.message);
@@ -53,6 +53,7 @@ function initDatabase() {
     return null;
   }
 }
+
 
 // ============================================================
 // SESSION MANAGEMENT
