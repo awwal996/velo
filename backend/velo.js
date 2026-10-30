@@ -917,7 +917,8 @@ async function chat(sessionId, userMessage, existingConvId = null) {
     if (!conv || conv.session_id !== sessionId) convId = null; // security: reject foreign conv
   }
   if (!convId) {
-    convId = await db.createConversation(sessionId, null);
+   convId = await db.createConversation(sessionId, userMessage);
+
   }
 
   if (getOpenAI()) return runGPT4o(convId, sessionId, userMessage);
