@@ -908,6 +908,8 @@ const builtInFilters = new Map();
 // MAIN ENTRY POINT
 // ============================================================
 async function chat(sessionId, userMessage, existingConvId = null) {
+  await db.getOrCreateSession(sessionId);
+
   // Get or create conversation
   let convId = existingConvId;
   if (convId) {
