@@ -172,35 +172,53 @@ img {
 ══════════════════════════════════════════════════════════════ */
 #app { display: flex; height: 100dvh; position: relative; }
 
-/* Hamburger menu button (mobile only) */
+/* Hamburger menu button - Beautifully responsive */
 #hamburger {
   display: none;
   position: fixed;
-  top: 16px;
-  left: 16px;
+  top: 12px;
+  left: 12px;
   z-index: 1000;
-  width: 44px;
-  height: 44px;
-  background: var(--primary);
-  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: 10px;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  box-shadow: 0 4px 12px rgba(37,99,235,.3);
-  transition: .2s;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
-#hamburger:hover { background: var(--primary-light); transform: scale(1.05); }
+#hamburger:active {
+  transform: scale(0.95);
+}
+#hamburger:hover { 
+  background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}
 #hamburger span {
-  width: 20px;
-  height: 2.5px;
+  width: 18px;
+  height: 2px;
   background: white;
   border-radius: 2px;
-  transition: .3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: block;
 }
-#hamburger.open span:nth-child(1) { transform: rotate(45deg) translateY(7.5px); }
-#hamburger.open span:nth-child(2) { opacity: 0; }
-#hamburger.open span:nth-child(3) { transform: rotate(-45deg) translateY(-7.5px); }
+#hamburger.open {
+  background: linear-gradient(135deg, var(--error) 0%, #dc2626 100%);
+}
+#hamburger.open span:nth-child(1) { 
+  transform: rotate(45deg) translate(5px, 5px);
+}
+#hamburger.open span:nth-child(2) { 
+  opacity: 0;
+  transform: translateX(-10px);
+}
+#hamburger.open span:nth-child(3) { 
+  transform: rotate(-45deg) translate(5px, -5px);
+}
 
 /* ── Sidebar ── */
 #sidebar {
@@ -488,6 +506,11 @@ img {
   #hamburger { 
     display: flex;
     -webkit-tap-highlight-color: transparent;
+    top: 10px;
+    left: 10px;
+    width: 38px;
+    height: 38px;
+  }
   }
   
   /* Sidebar - slide in from left */
@@ -617,6 +640,15 @@ img {
 
 /* Extra small devices (320px - 375px) */
 @media (max-width: 375px) {
+  #hamburger {
+    top: 8px;
+    left: 8px;
+    width: 36px;
+    height: 36px;
+  }
+  #hamburger span {
+    width: 16px;
+  }
   #header { padding: 8px 10px 8px 56px; }
   .logo { width: 28px; height: 28px; }
   .hdr-info h1 { font-size: 12px; }
