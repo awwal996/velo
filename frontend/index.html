@@ -228,7 +228,9 @@ img {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: transform .3s ease;
+  position: relative;
+  transition: transform .3s ease, background-color 0.3s ease;
+  z-index: 100;
 }
 #sidebar-head {
   padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0;
@@ -501,6 +503,24 @@ img {
    MOBILE RESPONSIVE DESIGN
    Optimized for all mobile devices including small screens
 ══════════════════════════════════════════════════════════════ */
+
+/* Desktop: Ensure sidebar is always visible */
+@media (min-width: 769px) {
+  #sidebar {
+    display: flex !important;
+    position: relative !important;
+    transform: translateX(0) !important;
+  }
+  
+  #sidebar-overlay {
+    display: none !important;
+  }
+  
+  #hamburger {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   /* Show hamburger menu */
   #hamburger { 
@@ -510,7 +530,6 @@ img {
     left: 10px;
     width: 38px;
     height: 38px;
-  }
   }
   
   /* Sidebar - slide in from left */
@@ -841,7 +860,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // ═══════════════════════════════════════════════════════════
 async function loadConversations() {
   try {
-    const res = await fetch(`${API}/conversations?session_id=${SESSION_ID}`);
+    const res = await fetch(${API}/conversations?session_id=${SESSION_ID});
     const data = await res.json();
     CONVERSATIONS = data.conversations || [];
     renderConversations();
@@ -851,7 +870,7 @@ async function loadConversations() {
 }
 
 function renderConversations() {
-  const html = CONVERSATIONS.map(c => `
+  const html = CONVERSATIONS.map(c => 
     <div class="conv-item ${c.id === CURRENT_CONV_ID ? 'active' : ''}" onclick="loadConversation('${c.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -863,13 +882,13 @@ function renderConversations() {
         </svg>
       </button>
     </div>
-  `).join('');
+  ).join('');
   document.getElementById('convs').innerHTML = html || '<p style="text-align:center;color:var(--text-tertiary);font-size:12px;padding:20px 0;">No conversations yet</p>';
 }
 
 async function loadConversation(convId) {
   try {
-    const res = await fetch(`${API}/conversations/${convId}/messages?session_id=${SESSION_ID}`);
+    const res = await fetch(${API}/conversations/${convId}/messages?session_id=${SESSION_ID});
     const data = await res.json();
     MESSAGES = data.messages || [];
     CURRENT_CONV_ID = convId;
@@ -888,7 +907,7 @@ async function loadConversation(convId) {
 async function deleteConversation(convId) {
   if (!confirm('Delete this conversation?')) return;
   try {
-    await fetch(`${API}/conversations/${convId}?session_id=${SESSION_ID}`, { method: 'DELETE' });
+    await fetch(${API}/conversations/${convId}?session_id=${SESSION_ID}, { method: 'DELETE' });
     if (CURRENT_CONV_ID === convId) {
       CURRENT_CONV_ID = null;
       MESSAGES = [];
@@ -917,7 +936,7 @@ function newChat() {
 // MESSAGES
 // ═══════════════════════════════════════════════════════════
 function showEmpty() {
-  document.getElementById('messages').innerHTML = `
+  document.getElementById('messages').innerHTML = 
     <div class="empty">
       <div class="empty-icon">🛍️</div>
       <h2>Hey! I'm Velo</h2>
@@ -929,7 +948,7 @@ function showEmpty() {
         <button class="sug-btn" onclick="quickSearch('3-bedroom flat in Abuja')">Flat in Abuja</button>
       </div>
     </div>
-  `;
+  ;
 }
 
 function renderMessages() {
@@ -944,12 +963,12 @@ function renderMessages() {
 
 function renderMessage(msg) {
   const isUser = msg.role === 'user';
-  const veloLogo = `<img src="assets/velontri-logo.png" alt="Velo" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%2316845B%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2248%22 font-weight=%22bold%22%3EV%3C/text%3E%3C/svg%3E'"/>`;
+  const veloLogo = <img src="assets/velontri-logo.png" alt="Velo" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%2316845B%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2248%22 font-weight=%22bold%22%3EV%3C/text%3E%3C/svg%3E'"/>;
   const av = isUser
-    ? `<div class="msg-av user">Y</div>`
-    : `<div class="msg-av assistant">${veloLogo}</div>`;
+    ? <div class="msg-av user">Y</div>
+    : <div class="msg-av assistant">${veloLogo}</div>;
   
-  return `
+  return 
     <div class="msg ${isUser ? 'user-msg' : ''}">
       ${av}
       <div class="msg-body">
@@ -957,7 +976,7 @@ function renderMessage(msg) {
         <div class="msg-text">${formatText(msg.content)}</div>
       </div>
     </div>
-  `;
+  ;
 }
 
 function appendMessage(role, content, listings = []) {
@@ -965,16 +984,16 @@ function appendMessage(role, content, listings = []) {
   
   const $msgs = document.getElementById('messages');
   const isUser = role === 'user';
-  const veloLogo = `<img src="assets/velontri-logo.png" alt="Velo" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%2316845B%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2248%22 font-weight=%22bold%22%3EV%3C/text%3E%3C/svg%3E'"/>`;
+  const veloLogo = <img src="assets/velontri-logo.png" alt="Velo" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%2316845B%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2248%22 font-weight=%22bold%22%3EV%3C/text%3E%3C/svg%3E'"/>;
   const av = isUser
-    ? `<div class="msg-av user">Y</div>`
-    : `<div class="msg-av assistant">${veloLogo}</div>`;
+    ? <div class="msg-av user">Y</div>
+    : <div class="msg-av assistant">${veloLogo}</div>;
   
   const listingsHTML = listings.length > 0
-    ? `<div class="msg-listings">${listings.map(renderListing).join('')}</div>`
+    ? <div class="msg-listings">${listings.map(renderListing).join('')}</div>
     : '';
   
-  const html = `
+  const html = 
     <div class="msg ${isUser ? 'user-msg' : ''}">
       ${av}
       <div class="msg-body">
@@ -983,15 +1002,15 @@ function appendMessage(role, content, listings = []) {
         ${listingsHTML}
       </div>
     </div>
-  `;
+  ;
   $msgs.insertAdjacentHTML('beforeend', html);
   $msgs.scrollTop = $msgs.scrollHeight;
 }
 
 function showTyping() {
   const $msgs = document.getElementById('messages');
-  const veloLogo = `<img src="assets/velontri-logo.png" alt="Velo" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%2316845B%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2248%22 font-weight=%22bold%22%3EV%3C/text%3E%3C/svg%3E'"/>`;
-  const html = `
+  const veloLogo = <img src="assets/velontri-logo.png" alt="Velo" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2250%22 fill=%22%2316845B%22/%3E%3Ctext x=%2250%22 y=%2250%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22white%22 font-size=%2248%22 font-weight=%22bold%22%3EV%3C/text%3E%3C/svg%3E'"/>;
+  const html = 
     <div class="msg" id="typing-msg">
       <div class="msg-av assistant">${veloLogo}</div>
       <div class="msg-body">
@@ -999,7 +1018,7 @@ function showTyping() {
         <div class="typing"><span></span><span></span><span></span></div>
       </div>
     </div>
-  `;
+  ;
   $msgs.insertAdjacentHTML('beforeend', html);
   $msgs.scrollTop = $msgs.scrollHeight;
 }
@@ -1042,7 +1061,7 @@ async function sendMessage(e) {
     removeTyping();
 
     if (data.error) {
-      appendMessage('assistant', `⚠️ ${data.error}`);
+      appendMessage('assistant', ⚠️ ${data.error});
     } else {
       CURRENT_CONV_ID = data.conversation_id;
       appendMessage('assistant', data.text, data.listings || []);
@@ -1071,20 +1090,20 @@ function renderListing(l) {
   const bcls = cond === 'new' ? 'bnew' : cond === 'refurbished' ? 'brefurb' : 'bused';
   const clbl = l.condition ? l.condition.charAt(0).toUpperCase() + l.condition.slice(1) : null;
   const loc = [l.city, l.state].filter(Boolean).join(', ') || 'Nigeria';
-  const stars = l.avg_rating > 0 ? `★ ${l.avg_rating.toFixed(1)}` : '';
+  const stars = l.avg_rating > 0 ? ★ ${l.avg_rating.toFixed(1)} : '';
   const contactHref = l.contact_url || l.seller_contact_fallback || l.listing_url;
   const isDirectWA = !!l.contact_url;
 
-  return `<div class="lcard" onclick="window.open('${esc(l.listing_url)}', '_blank')">
+  return <div class="lcard" onclick="window.open('${esc(l.listing_url)}', '_blank')">
     ${l.image_url
-      ? `<img class="cimg" src="${esc(l.image_url)}" alt="${esc(l.title)}" onerror="this.outerHTML='<div class=\\'ciph\\'>📦</div>'">`
-      : `<div class="ciph">📦</div>`}
+      ? <img class="cimg" src="${esc(l.image_url)}" alt="${esc(l.title)}" onerror="this.outerHTML='<div class=\\'ciph\\'>📦</div>'">
+      : <div class="ciph">📦</div>}
     <div class="cbody">
       <div class="cbadges">
-        ${clbl ? `<span class="badge ${bcls}">${esc(clbl)}</span>` : ''}
+        ${clbl ? <span class="badge ${bcls}">${esc(clbl)}</span> : ''}
         ${l.is_negotiable ? '<span class="badge bneg">Negotiable</span>' : ''}
         ${l.verified ? '<span class="badge bverif">✓ Verified</span>' : ''}
-        ${l.currency && l.currency !== 'NGN' ? `<span class="badge" style="background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.2)">${esc(l.currency)}</span>` : ''}
+        ${l.currency && l.currency !== 'NGN' ? <span class="badge" style="background:rgba(99,102,241,.12);color:#818cf8;border:1px solid rgba(99,102,241,.2)">${esc(l.currency)}</span> : ''}
       </div>
       <div class="ctitle">${esc(l.title)}</div>
       <div class="cprice">${esc(l.formatted_price || '₦—')}${l.is_negotiable ? '<span class="neg"> · Neg.</span>' : ''}</div>
@@ -1094,9 +1113,9 @@ function renderListing(l) {
         </svg>${esc(loc)}
       </div>
       <div class="cseller">
-        ${l.verified ? `<span class="vicon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>` : ''}
+        ${l.verified ? <span class="vicon"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span> : ''}
         <span class="seller-av">${esc((l.seller_name||'V').charAt(0).toUpperCase())}</span>
-        ${stars ? `<span style="color:#f59e0b;font-size:11px">${stars}</span>` : ''}
+        ${stars ? <span style="color:#f59e0b;font-size:11px">${stars}</span> : ''}
         <span class="sname">${esc(l.seller_name || 'Seller')}</span>
       </div>
     </div>
@@ -1107,7 +1126,7 @@ function renderListing(l) {
         ${isDirectWA ? 'Chat' : 'Contact'}
       </a>
     </div>
-  </div>`;
+  </div>;
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1115,13 +1134,13 @@ function renderListing(l) {
 // ═══════════════════════════════════════════════════════════
 async function openMemoriesModal() {
   try {
-    const res = await fetch(`${API}/memories?session_id=${SESSION_ID}`);
+    const res = await fetch(${API}/memories?session_id=${SESSION_ID});
     const data = await res.json();
     const memories = data.memories || [];
     
     const html = memories.length === 0
       ? '<p style="text-align:center;color:var(--text-tertiary);padding:40px 0;">No memories saved yet.<br>Velo will remember important preferences as you chat.</p>'
-      : memories.map(m => `
+      : memories.map(m => 
         <div class="memory-item">
           <div class="memory-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1138,7 +1157,7 @@ async function openMemoriesModal() {
             </svg>
           </button>
         </div>
-      `).join('');
+      ).join('');
     
     document.getElementById('memories-list').innerHTML = html;
     document.getElementById('memories-modal').classList.add('open');
@@ -1154,7 +1173,7 @@ function closeMemoriesModal() {
 
 async function deleteMemory(memId) {
   try {
-    await fetch(`${API}/memories/${memId}?session_id=${SESSION_ID}`, { method: 'DELETE' });
+    await fetch(${API}/memories/${memId}?session_id=${SESSION_ID}, { method: 'DELETE' });
     openMemoriesModal(); // Refresh
   } catch (err) {
     console.error('Delete memory:', err);
@@ -1164,7 +1183,7 @@ async function deleteMemory(memId) {
 async function clearAllMemories() {
   if (!confirm('Delete all memories? This cannot be undone.')) return;
   try {
-    await fetch(`${API}/memories/clear`, {
+    await fetch(${API}/memories/clear, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: SESSION_ID }),
