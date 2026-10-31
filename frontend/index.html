@@ -867,18 +867,32 @@ const API = 'https://velontri-chatbot-backend.onrender.com/api/chat';
 // DARK MODE DETECTION FROM PARENT SITE
 // ═══════════════════════════════════════════════════════════
 function detectParentDarkMode() {
+  console.log('[Velo Dark Mode] Starting dark mode detection...');
+  
   try {
     // Check if we're in an iframe
     const isIframe = window.self !== window.top;
+    console.log('[Velo Dark Mode] Running in iframe:', isIframe);
     
-    if (isIframe) {
-      // Try to access parent document (same-origin only)
-      try {
-        const parentDoc = window.parent.document;
-        const parentHtml = parentDoc.documentElement;
-        const parentBody = parentDoc.body;
-        
-        // Check common dark mode indicators
+    if (!isIframe) {
+      console.log('[Velo Dark Mode] Not in iframe, using system preferences only');
+      return;
+    }
+    
+    // Try to access parent document (same-origin only)
+    try {
+      const parentDoc = window.parent.document;
+      const parentHtml = parentDoc.documentElement;
+      const parentBody = parentDoc.body;
+      
+      console.log('[Velo Dark Mode] Successfully accessed parent document (same-origin)');
+      console.log('[Velo Dark Mode] Parent HTML classes:', parentHtml.className);
+      console.log('[Velo Dark Mode] Parent HTML data-theme:', parentHtml.getAttribute('data-theme'));
+      console.log('[Velo Dark Mode] Parent BODY classes:', parentBody.className);
+      console.log('[Velo Dark Mode] Parent BODY data-theme:', parentBody.getAttribute('data-theme'));
+      
+      // Function to check dark mode state
+      function checkDarkMode() {
         const isDark = 
           parentHtml.classList.contains('dark') ||
           parentHtml.classList.contains('dark-mode') ||
@@ -887,51 +901,84 @@ function detectParentDarkMode() {
           parentBody.classList.contains('dark-mode') ||
           parentBody.getAttribute('data-theme') === 'dark';
         
-        // Apply dark mode class to our html element
-        if (isDark) {
+        console.log('[Velo Dark Mode] Dark mode detected:', isDark);
+        return isDark;
+      }
+      
+      // Initial check and apply
+      const initialDark = checkDarkMode();
+      if (initialDark) {
+        document.documentElement.classList.add('dark-mode');
+        console.log('[Velo Dark Mode] ✅ Applied dark-mode class');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+        console.log('[Velo Dark Mode] ✅ Removed dark-mode class (light mode)');
+      }
+      
+      // Watch for changes in parent
+      const observer = new MutationObserver((mutations) => {
+        console.log('[Velo Dark Mode] 🔄 Mutation detected in parent!');
+        mutations.forEach(mutation => {
+          console.log('[Velo Dark Mode] Changed:', mutation.type, mutation.attributeName, mutation.target.nodeName);
+        });
+        
+        const nowDark = checkDarkMode();
+        
+        if (nowDark) {
           document.documentElement.classList.add('dark-mode');
+          console.log('[Velo Dark Mode] ✅ Switched to DARK mode');
         } else {
           document.documentElement.classList.remove('dark-mode');
+          console.log('[Velo Dark Mode] ✅ Switched to LIGHT mode');
         }
+      });
+      
+      // Observe both html and body for class/attribute changes
+      observer.observe(parentHtml, { 
+        attributes: true, 
+        attributeFilter: ['class', 'data-theme', 'style'],
+        attributeOldValue: true
+      });
+      observer.observe(parentBody, { 
+        attributes: true, 
+        attributeFilter: ['class', 'data-theme', 'style'],
+        attributeOldValue: true
+      });
+      
+      console.log('[Velo Dark Mode] ✅ MutationObserver attached and monitoring parent');
+      
+    } catch (e) {
+      // Cross-origin iframe - use postMessage communication
+      console.warn('[Velo Dark Mode] ⚠️ Cross-origin iframe detected:', e.message);
+      console.log('[Velo Dark Mode] Listening for postMessage from parent...');
+      
+      // Listen for messages from parent about dark mode
+      window.addEventListener('message', (event) => {
+        console.log('[Velo Dark Mode] 📨 Received message:', event.data);
         
-        // Watch for changes in parent
-        const observer = new MutationObserver(() => {
-          const nowDark = 
-            parentHtml.classList.contains('dark') ||
-            parentHtml.classList.contains('dark-mode') ||
-            parentHtml.getAttribute('data-theme') === 'dark' ||
-            parentBody.classList.contains('dark') ||
-            parentBody.classList.contains('dark-mode') ||
-            parentBody.getAttribute('data-theme') === 'dark';
+        if (event.data && event.data.type === 'darkModeChange') {
+          console.log('[Velo Dark Mode] Dark mode message received, isDark:', event.data.isDark);
           
-          if (nowDark) {
+          if (event.data.isDark) {
             document.documentElement.classList.add('dark-mode');
+            console.log('[Velo Dark Mode] ✅ Applied dark-mode via postMessage');
           } else {
             document.documentElement.classList.remove('dark-mode');
+            console.log('[Velo Dark Mode] ✅ Removed dark-mode via postMessage');
           }
-        });
-        
-        // Observe both html and body for class/attribute changes
-        observer.observe(parentHtml, { attributes: true, attributeFilter: ['class', 'data-theme'] });
-        observer.observe(parentBody, { attributes: true, attributeFilter: ['class', 'data-theme'] });
-        
-      } catch (e) {
-        // Cross-origin iframe - use postMessage communication
-        console.log('[Velo] Cross-origin iframe detected, using fallback');
-        // Listen for messages from parent about dark mode
-        window.addEventListener('message', (event) => {
-          if (event.data && event.data.type === 'darkModeChange') {
-            if (event.data.isDark) {
-              document.documentElement.classList.add('dark-mode');
-            } else {
-              document.documentElement.classList.remove('dark-mode');
-            }
-          }
-        });
+        }
+      });
+      
+      // Request initial state from parent
+      try {
+        window.parent.postMessage({ type: 'requestDarkMode' }, '*');
+        console.log('[Velo Dark Mode] 📤 Sent requestDarkMode to parent');
+      } catch (postErr) {
+        console.error('[Velo Dark Mode] Could not send message to parent:', postErr);
       }
     }
   } catch (e) {
-    console.log('[Velo] Dark mode detection:', e.message);
+    console.error('[Velo Dark Mode] ❌ Error in dark mode detection:', e);
   }
 }
 
@@ -939,8 +986,23 @@ function detectParentDarkMode() {
 // INIT
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  console.log('[Velo] ========================================');
+  console.log('[Velo] Chatbot initializing...');
+  console.log('[Velo] Current HTML classes:', document.documentElement.className);
+  console.log('[Velo] Window location:', window.location.href);
+  console.log('[Velo] ========================================');
+  
   // Detect parent site dark mode
   detectParentDarkMode();
+  
+  // Log current state after detection
+  setTimeout(() => {
+    console.log('[Velo] ========================================');
+    console.log('[Velo] Post-detection state:');
+    console.log('[Velo] HTML has dark-mode class:', document.documentElement.classList.contains('dark-mode'));
+    console.log('[Velo] Computed background color:', getComputedStyle(document.body).backgroundColor);
+    console.log('[Velo] ========================================');
+  }, 500);
   
   loadConversations();
   showEmpty();
