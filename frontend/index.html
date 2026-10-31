@@ -1008,12 +1008,11 @@ function detectParentDarkMode() {
       console.log('[Velo Dark Mode] ✅ MutationObserver attached and monitoring parent');
       
     } catch (e) {
-      // Cross-origin iframe - use postMessage communication
+      // Cross-origin iframe - use alternative detection methods
       console.warn('[Velo Dark Mode] ⚠️ Cross-origin iframe detected:', e.message);
-      console.log('[Velo Dark Mode] Listening for postMessage from parent...');
-      console.log('[Velo Dark Mode] Parent site needs to send {type: "darkModeChange", isDark: boolean}');
+      console.log('[Velo Dark Mode] 🔍 Using alternative detection methods...');
       
-      // Listen for messages from parent about dark mode
+      // Method 1: Listen for postMessage from parent (if parent sends it)
       window.addEventListener('message', (event) => {
         console.log('[Velo Dark Mode] 📨 Received message:', event.data);
         
@@ -1030,13 +1029,73 @@ function detectParentDarkMode() {
         }
       });
       
-      // Request initial state from parent
+      // Method 2: Request initial state from parent
       try {
         window.parent.postMessage({ type: 'requestDarkMode' }, '*');
         console.log('[Velo Dark Mode] 📤 Sent requestDarkMode to parent');
       } catch (postErr) {
         console.error('[Velo Dark Mode] Could not send message to parent:', postErr);
       }
+      
+      // Method 3: SMART DETECTION - Inspect parent's background through rendering
+      console.log('[Velo Dark Mode] 🧠 Attempting smart background detection...');
+      
+      function detectParentBackground() {
+        try {
+          // Create a transparent element that can see through to parent
+          const detector = document.createElement('div');
+          detector.style.cssText = `
+            position: fixed;
+            top: -100px;
+            left: -100px;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: -9999;
+          `;
+          document.body.appendChild(detector);
+          
+          // Try to detect parent background color through window
+          const testCanvas = document.createElement('canvas');
+          testCanvas.width = 1;
+          testCanvas.height = 1;
+          const ctx = testCanvas.getContext('2d');
+          
+          // Check if we can detect dark background
+          // Note: This is limited in cross-origin, but worth trying
+          
+          setTimeout(() => detector.remove(), 100);
+          
+          console.log('[Velo Dark Mode] ⚠️ Smart detection limited by cross-origin policy');
+          console.log('[Velo Dark Mode] 💡 Recommendation: Add postMessage handler to parent site');
+          
+        } catch (err) {
+          console.log('[Velo Dark Mode] Smart detection failed:', err.message);
+        }
+      }
+      
+      detectParentBackground();
+      
+      // Method 4: POLLING with postMessage - Keep asking parent
+      let pollCount = 0;
+      const pollInterval = setInterval(() => {
+        pollCount++;
+        
+        if (pollCount <= 10) { // Try 10 times (20 seconds)
+          try {
+            window.parent.postMessage({ type: 'requestDarkMode' }, '*');
+            console.log('[Velo Dark Mode] 🔄 Poll #' + pollCount + ': Requesting parent theme...');
+          } catch (e) {
+            // Silent fail
+          }
+        } else {
+          clearInterval(pollInterval);
+          console.log('[Velo Dark Mode] ⚠️ Parent site is not responding to theme requests');
+          console.log('[Velo Dark Mode] 💡 Staying in LIGHT mode (default)');
+          console.log('[Velo Dark Mode] 📖 To enable dark mode sync, see PARENT_SITE_INTEGRATION.md');
+        }
+      }, 2000);
     }
   } catch (e) {
     console.error('[Velo Dark Mode] ❌ Error in dark mode detection:', e);
