@@ -137,6 +137,8 @@ const MEMORY_PATTERNS = [
   { re: /i(?:'m| am) (?:in|from|based in) ([\w\s]+?)(?:\.|$|,)/i, type: 'location_preference' },
   { re: /i (?:mainly|mostly|usually) (?:buy|shop for|look for|need) ([\w\s]+?)(?:\.|$|,)/i, type: 'shopping_interest' },
   { re: /(?:remind me|remember that) (.+?)(?:\.|$)/i, type: 'explicit_reminder' },
+  // Extract name from: "I'm Awwal", "My name is Awwal", "Call me Awwal", "I am Awwal"
+  { re: /(?:i'?m|my name is|call me|i am|this is)\s+([a-z]{2,20})(?:\s+and|,|\.|$)/i, type: 'user_name' },
 ];
 
 async function extractMemories(sessionId, userMessage, msgId) {
@@ -615,9 +617,15 @@ Want me to help you find something specific on Velontri?`;
   
   // Who/what are you / Tell me about yourself / What is your purpose
   if (/who are you|what is velo|what are you|tell me about yourself|your name|your purpose|main purpose|your job|your role|your mission|what do you do|introduce yourself/.test(l)) {
-    return `Hello! I am Velo, an AI assistant created specifically for Velontri marketplace. 
+    // Check if user just introduced themselves - respond more personally
+    const justIntroduced = /(?:i'?m|my name is|call me|i am)\s+([a-z]{2,20})/i.test(userMessage);
+    if (justIntroduced) {
+      const memories = await db.getMemories(sessionId);
+      const userName = memories.find(m => m.memory_type === 'user_name')?.content;
+      const greeting = userName ? `Nice to meet you, ${userName}! ` : `Nice to meet you! `;
+      return `${greeting}I'm Velo, an AI assistant created specifically for Velontri marketplace. 
 
-My purpose is to help you:
+My purpose is to help you:`
 • Find any product on Velontri (phones, cars, property, electronics, fashion, etc.)
 • Filter by price, location, and condition
 • Connect you directly with sellers via WhatsApp
@@ -712,18 +720,24 @@ async function runBuiltIn(convId, sessionId, userMessage, fromFallback = false) 
   if (intent === 'greeting') {
     const msgs    = (await db.getMessages(convId)).filter(m => m.role === 'user');
     const isReturn = msgs.length > 1;
+    
+    // Check if we have the user's name in memory
+    const memories = await db.getMemories(sessionId);
+    const userName = memories.find(m => m.memory_type === 'user_name')?.content;
+    const nameGreeting = userName ? ` ${userName}!` : '!';
+    
     const greets  = isReturn
       ? [
-          'Welcome back! Great to see you again. What can I find for you today?',
-          'Hey there! Ready to help. What do you need?',
-          'Good to see you! What are you shopping for?',
-          'Hey! Back for more? I am here to help. What do you need?'
+          `Welcome back${nameGreeting} Great to see you again. What can I find for you today?`,
+          `Hey there${nameGreeting} Ready to help. What do you need?`,
+          `Good to see you${nameGreeting} What are you shopping for?`,
+          `Hey${nameGreeting} Back for more? I'm here to help. What do you need?`
         ]
       : [
-          'Hello! I am Velo, your shopping assistant. What would you like to find on Velontri today?',
-          'Hey! Welcome to Velontri. I am here to help you find exactly what you need. What are you looking for?',
-          'Hi there! I can help you find anything - phones, cars, property, fashion, you name it. What interests you?',
-          'Hello! Ready to help you discover great products. What can I find for you?'
+          `Hello${nameGreeting} I'm Velo, your shopping assistant. What would you like to find on Velontri today?`,
+          `Hey${nameGreeting} Welcome to Velontri. I'm here to help you find exactly what you need. What are you looking for?`,
+          `Hi there${nameGreeting} I can help you find anything - phones, cars, property, fashion, you name it. What interests you?`,
+          `Hello${nameGreeting} Ready to help you discover great products. What can I find for you?`
         ];
     return respond(greets[Math.floor(Math.random() * greets.length)]);
   }
@@ -847,14 +861,14 @@ async function runBuiltIn(convId, sessionId, userMessage, fromFallback = false) 
     const hasVerified = listings.some(l => l.verified);
     
     if (!hasMatch && !searchResult.relaxed && !askedForVerified) {
-      // Results don't match query at all - be honest and helpful
+      // Results don't match query at all - be honest and NO misleading listings
       const item = brandLower
         ? `${filters.brand} ${filters.query || ''}`
         : filters.query || 'that';
       return await respond(
-        `I couldn't find exact matches for **${item.trim()}** on Velontri. These are the closest alternatives I found, but they're not quite what you asked for.\n\nWould you like to:\n• Try a different search term\n• Browse a different category\n• Check back later (new items are added daily)`,
-        listings,
-        total
+        `I searched everywhere but couldn't find **${item.trim()}** on Velontri right now.\n\nWould you like to:\n• Try searching with a different keyword\n• Browse a related category\n• Check back later (new items are added daily!)`,
+        [],  // ← NO MISLEADING RESULTS
+        0
       );
     }
     

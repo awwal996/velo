@@ -63,67 +63,6 @@
   --font: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
-/* ══════════════════════════════════════════════════════════════
-   DARK MODE - Manual Toggle Only (Disabled Auto-Detection)
-   To enable dark mode: add data-theme="dark" to <html> tag
-══════════════════════════════════════════════════════════════ */
-[data-theme="dark"] {
-    --primary: #6366F1;      /* Bright Indigo for dark mode */
-    --primary-light: #818CF8;
-    --primary-dark: #4F46E5;
-    --primary-glow: rgba(99, 102, 241, 0.25);
-    --primary-soft: rgba(99, 102, 241, 0.12);
-    
-    --accent: #A78BFA;
-    --accent-light: #C4B5FD;
-    --accent-glow: rgba(167, 139, 250, 0.2);
-    
-    --success: #6366F1;
-    --warning: #F59E0B;
-    --error: #F87171;
-    --whatsapp: #25D366;
-    
-    /* Dark backgrounds */
-    --bg: #0a0a0a;
-    --bg-1: #1a1a1a;
-    --bg-2: #2a2a2a;
-    --bg-3: #3a3a3a;
-    --card: #1a1a1a;
-    --input: #2a2a2a;
-    
-    /* Dark borders */
-    --border: #2a2a2a;
-    --border-medium: #3a3a3a;
-    --border-dark: #4a4a4a;
-    
-    /* Dark text */
-    --text: #F8F9FA;
-    --text-secondary: #ADB5BD;
-    --text-tertiary: #6C757D;
-    
-    /* Dark shadows - more subtle */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
-    --shadow-xl: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
-}
-
-/* Dark mode image adjustments */
-[data-theme="dark"] img:not(.logo) {
-  opacity: 0.9;
-}
-
-/* Glassmorphism effect in dark mode */
-[data-theme="dark"] #header {
-  background: rgba(26, 26, 26, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-}
-
-[data-theme="dark"] .modal {
-  background: rgba(10, 10, 10, 0.8);
-}
-
 *, *::before, *::after { 
   box-sizing: border-box; 
   margin: 0; 
@@ -137,7 +76,7 @@ html, body {
 
 body { 
   font-family: var(--font); 
-  background: var(--bg); 
+  background: #FFFFFF !important;  /* Force white background */ 
   color: var(--text); 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
