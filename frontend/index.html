@@ -829,6 +829,71 @@ let MESSAGES = [];
 const API = 'https://velontri-chatbot-backend.onrender.com/api/chat';
 
 // ═══════════════════════════════════════════════════════════
+// DEBUG HELPER - Call window.debugDarkMode() in console
+// ═══════════════════════════════════════════════════════════
+window.debugDarkMode = function() {
+  console.log('========================================');
+  console.log('DARK MODE DEBUG INFO');
+  console.log('========================================');
+  
+  try {
+    const isIframe = window.self !== window.top;
+    console.log('In iframe:', isIframe);
+    
+    if (isIframe) {
+      try {
+        const parentDoc = window.parent.document;
+        const parentHtml = parentDoc.documentElement;
+        const parentBody = parentDoc.body;
+        
+        console.log('\n--- PARENT SITE INFO ---');
+        console.log('Parent HTML tag:', parentHtml.tagName);
+        console.log('Parent HTML classes:', parentHtml.className || '(none)');
+        console.log('Parent HTML data-theme:', parentHtml.getAttribute('data-theme') || '(none)');
+        console.log('Parent HTML data-color-scheme:', parentHtml.getAttribute('data-color-scheme') || '(none)');
+        console.log('Parent HTML data-mode:', parentHtml.getAttribute('data-mode') || '(none)');
+        
+        console.log('\nParent BODY classes:', parentBody.className || '(none)');
+        console.log('Parent BODY data-theme:', parentBody.getAttribute('data-theme') || '(none)');
+        console.log('Parent BODY data-color-scheme:', parentBody.getAttribute('data-color-scheme') || '(none)');
+        console.log('Parent BODY data-mode:', parentBody.getAttribute('data-mode') || '(none)');
+        
+        const isDark = 
+          parentHtml.classList.contains('dark') ||
+          parentHtml.classList.contains('dark-mode') ||
+          parentHtml.classList.contains('theme-dark') ||
+          parentHtml.classList.contains('dark-theme') ||
+          parentHtml.getAttribute('data-theme') === 'dark' ||
+          parentHtml.getAttribute('data-color-scheme') === 'dark' ||
+          parentHtml.getAttribute('data-mode') === 'dark' ||
+          parentBody.classList.contains('dark') ||
+          parentBody.classList.contains('dark-mode') ||
+          parentBody.classList.contains('theme-dark') ||
+          parentBody.classList.contains('dark-theme') ||
+          parentBody.getAttribute('data-theme') === 'dark' ||
+          parentBody.getAttribute('data-color-scheme') === 'dark' ||
+          parentBody.getAttribute('data-mode') === 'dark';
+        
+        console.log('\n--- DETECTION RESULT ---');
+        console.log('Parent is dark mode:', isDark ? '✅ YES' : '❌ NO');
+        
+      } catch (e) {
+        console.log('Cross-origin restriction:', e.message);
+      }
+    }
+    
+    console.log('\n--- CHATBOT STATE ---');
+    console.log('Chatbot HTML classes:', document.documentElement.className || '(none)');
+    console.log('Has dark-mode class:', document.documentElement.classList.contains('dark-mode') ? '✅ YES' : '❌ NO');
+    console.log('Background color:', getComputedStyle(document.body).backgroundColor);
+    
+    console.log('========================================');
+  } catch (err) {
+    console.error('Debug error:', err);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════
 // DARK MODE DETECTION FROM PARENT SITE
 // IMPORTANT: Only detects parent site, NOT system preference
 // ═══════════════════════════════════════════════════════════
@@ -869,58 +934,76 @@ function detectParentDarkMode() {
         const isDark = 
           parentHtml.classList.contains('dark') ||
           parentHtml.classList.contains('dark-mode') ||
+          parentHtml.classList.contains('theme-dark') ||
+          parentHtml.classList.contains('dark-theme') ||
           parentHtml.getAttribute('data-theme') === 'dark' ||
+          parentHtml.getAttribute('data-color-scheme') === 'dark' ||
+          parentHtml.getAttribute('data-mode') === 'dark' ||
           parentBody.classList.contains('dark') ||
           parentBody.classList.contains('dark-mode') ||
-          parentBody.getAttribute('data-theme') === 'dark';
+          parentBody.classList.contains('theme-dark') ||
+          parentBody.classList.contains('dark-theme') ||
+          parentBody.getAttribute('data-theme') === 'dark' ||
+          parentBody.getAttribute('data-color-scheme') === 'dark' ||
+          parentBody.getAttribute('data-mode') === 'dark';
         
         console.log('[Velo Dark Mode] Parent site dark mode status:', isDark);
+        console.log('[Velo Dark Mode] Parent HTML classes:', parentHtml.className);
+        console.log('[Velo Dark Mode] Parent BODY classes:', parentBody.className);
         return isDark;
+      }
+      
+      // Function to apply dark mode
+      function applyDarkMode(isDark) {
+        if (isDark) {
+          document.documentElement.classList.add('dark-mode');
+          console.log('[Velo Dark Mode] ✅ Applied DARK mode');
+        } else {
+          document.documentElement.classList.remove('dark-mode');
+          console.log('[Velo Dark Mode] ✅ Applied LIGHT mode');
+        }
       }
       
       // Initial check and apply
       const initialDark = checkDarkMode();
-      if (initialDark) {
-        document.documentElement.classList.add('dark-mode');
-        console.log('[Velo Dark Mode] ✅ Applied DARK mode (parent is dark)');
-      } else {
-        document.documentElement.classList.remove('dark-mode');
-        console.log('[Velo Dark Mode] ✅ Keeping LIGHT mode (parent is light)');
-      }
+      applyDarkMode(initialDark);
       
-      // Watch for changes in parent
+      // Watch for changes in parent with MutationObserver
       const observer = new MutationObserver((mutations) => {
         console.log('[Velo Dark Mode] 🔄 Parent site theme changed!');
         mutations.forEach(mutation => {
-          console.log('[Velo Dark Mode] Changed:', mutation.type, mutation.attributeName, mutation.target.nodeName);
-          if (mutation.oldValue !== mutation.target.getAttribute(mutation.attributeName)) {
-            console.log('[Velo Dark Mode]   Old:', mutation.oldValue);
-            console.log('[Velo Dark Mode]   New:', mutation.target.getAttribute(mutation.attributeName));
-          }
+          console.log('[Velo Dark Mode] Changed:', mutation.attributeName, 'on', mutation.target.nodeName);
+          console.log('[Velo Dark Mode]   New value:', mutation.target.getAttribute(mutation.attributeName));
         });
         
         const nowDark = checkDarkMode();
-        
-        if (nowDark) {
-          document.documentElement.classList.add('dark-mode');
-          console.log('[Velo Dark Mode] ✅ Switched to DARK mode');
-        } else {
-          document.documentElement.classList.remove('dark-mode');
-          console.log('[Velo Dark Mode] ✅ Switched to LIGHT mode');
-        }
+        applyDarkMode(nowDark);
       });
       
       // Observe both html and body for class/attribute changes
       observer.observe(parentHtml, { 
         attributes: true, 
-        attributeFilter: ['class', 'data-theme', 'style'],
+        attributeFilter: ['class', 'data-theme', 'data-color-scheme', 'data-mode', 'style'],
         attributeOldValue: true
       });
       observer.observe(parentBody, { 
         attributes: true, 
-        attributeFilter: ['class', 'data-theme', 'style'],
+        attributeFilter: ['class', 'data-theme', 'data-color-scheme', 'data-mode', 'style'],
         attributeOldValue: true
       });
+      
+      console.log('[Velo Dark Mode] ✅ MutationObserver attached and monitoring parent');
+      
+      // FALLBACK: Poll every 2 seconds to catch missed changes
+      setInterval(() => {
+        const currentDark = checkDarkMode();
+        const chatbotIsDark = document.documentElement.classList.contains('dark-mode');
+        
+        if (currentDark !== chatbotIsDark) {
+          console.log('[Velo Dark Mode] 🔄 Polling detected theme mismatch - syncing...');
+          applyDarkMode(currentDark);
+        }
+      }, 2000);
       
       console.log('[Velo Dark Mode] ✅ MutationObserver attached and monitoring parent');
       
