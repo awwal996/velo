@@ -430,9 +430,19 @@ img {
   flex: 1; padding: 14px 18px; background: var(--input); border: 1px solid var(--border);
   border-radius: var(--radius-lg); color: var(--text); font-size: 14px; resize: none;
   font-family: var(--font); line-height: 1.4; max-height: 120px; transition: .15s;
+  -webkit-user-select: text; /* Allow text selection in input */
+  user-select: text;
 }
 #input:focus { outline: none; border-color: var(--primary); background: var(--card); }
-#input::placeholder { color: var(--text-tertiary); }
+#input::placeholder { 
+  color: var(--text-tertiary);
+  user-select: none; /* Prevent placeholder selection */
+  -webkit-user-select: none;
+  pointer-events: none; /* Prevent interaction with placeholder */
+  white-space: nowrap; /* Prevent wrapping */
+  overflow: hidden; /* Hide overflow */
+  text-overflow: ellipsis; /* Show ... if too long */
+}
 #send-btn {
   width: 48px; height: 48px; background: var(--primary); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -612,6 +622,18 @@ img {
     font-size: 16px;
     padding: 12px 14px;
     max-height: 100px;
+    -webkit-user-select: text;
+    user-select: text;
+  }
+  
+  /* Shorter placeholder for mobile */
+  #input::placeholder {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+    -webkit-user-select: none;
+    pointer-events: none;
   }
   
   /* Send button - touch-friendly size */
@@ -765,7 +787,7 @@ img {
 
     <div id="input-area">
       <form id="input-form">
-        <textarea id="input" placeholder="Ask me to find anything on Velontri..." rows="1"></textarea>
+        <textarea id="input" placeholder="Ask me to find anything on Velontri..." rows="1" aria-label="Search Velontri marketplace"></textarea>
         <button type="submit" id="send-btn">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
             <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -991,6 +1013,35 @@ window.addEventListener('DOMContentLoaded', () => {
   
   // Auto-resize textarea
   const input = document.getElementById('input');
+  
+  // Set responsive placeholder based on screen size
+  function setResponsivePlaceholder() {
+    const width = window.innerWidth;
+    if (width <= 375) {
+      // Very small phones
+      input.placeholder = "Find anything on Velontri...";
+    } else if (width <= 480) {
+      // Small phones
+      input.placeholder = "Ask me to find on Velontri...";
+    } else if (width <= 768) {
+      // Medium phones/tablets
+      input.placeholder = "Ask me to find anything on Velontri...";
+    } else {
+      // Desktop
+      input.placeholder = "Ask me to find anything on Velontri...";
+    }
+  }
+  
+  // Set initial placeholder
+  setResponsivePlaceholder();
+  
+  // Update on resize
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(setResponsivePlaceholder, 100);
+  });
+  
   input.addEventListener('input', () => {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 120) + 'px';
