@@ -63,6 +63,120 @@
   --font: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   DARK MODE - Auto-detects system preference OR parent site
+══════════════════════════════════════════════════════════════ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: #6366F1;      /* Bright Indigo for dark mode */
+    --primary-light: #818CF8;
+    --primary-dark: #4F46E5;
+    --primary-glow: rgba(99, 102, 241, 0.25);
+    --primary-soft: rgba(99, 102, 241, 0.12);
+    
+    --accent: #A78BFA;
+    --accent-light: #C4B5FD;
+    --accent-glow: rgba(167, 139, 250, 0.2);
+    
+    --success: #6366F1;
+    --warning: #F59E0B;
+    --error: #F87171;
+    --whatsapp: #25D366;
+    
+    /* Dark backgrounds */
+    --bg: #0a0a0a;
+    --bg-1: #1a1a1a;
+    --bg-2: #2a2a2a;
+    --bg-3: #3a3a3a;
+    --card: #1a1a1a;
+    --input: #2a2a2a;
+    
+    /* Dark borders */
+    --border: #2a2a2a;
+    --border-medium: #3a3a3a;
+    --border-dark: #4a4a4a;
+    
+    /* Dark text */
+    --text: #F8F9FA;
+    --text-secondary: #ADB5BD;
+    --text-tertiary: #6C757D;
+    
+    /* Dark shadows - more subtle */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+    --shadow-xl: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
+  }
+  
+  /* Dark mode image adjustments */
+  img:not(.logo) {
+    opacity: 0.9;
+  }
+  
+  /* Glassmorphism effect in dark mode */
+  #header {
+    background: rgba(26, 26, 26, 0.8);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  
+  .modal {
+    background: rgba(10, 10, 10, 0.8);
+  }
+}
+
+/* Manual dark mode class (set by JavaScript detection) */
+.dark-mode {
+  --primary: #6366F1;
+  --primary-light: #818CF8;
+  --primary-dark: #4F46E5;
+  --primary-glow: rgba(99, 102, 241, 0.25);
+  --primary-soft: rgba(99, 102, 241, 0.12);
+  
+  --accent: #A78BFA;
+  --accent-light: #C4B5FD;
+  --accent-glow: rgba(167, 139, 250, 0.2);
+  
+  --success: #6366F1;
+  --warning: #F59E0B;
+  --error: #F87171;
+  --whatsapp: #25D366;
+  
+  --bg: #0a0a0a;
+  --bg-1: #1a1a1a;
+  --bg-2: #2a2a2a;
+  --bg-3: #3a3a3a;
+  --card: #1a1a1a;
+  --input: #2a2a2a;
+  
+  --border: #2a2a2a;
+  --border-medium: #3a3a3a;
+  --border-dark: #4a4a4a;
+  
+  --text: #F8F9FA;
+  --text-secondary: #ADB5BD;
+  --text-tertiary: #6C757D;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  --shadow-xl: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
+}
+
+.dark-mode img:not(.logo) {
+  opacity: 0.9;
+}
+
+.dark-mode #header {
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.dark-mode .modal {
+  background: rgba(10, 10, 10, 0.8);
+}
+
 *, *::before, *::after { 
   box-sizing: border-box; 
   margin: 0; 
@@ -76,7 +190,7 @@ html, body {
 
 body { 
   font-family: var(--font); 
-  background: #FFFFFF !important;  /* Force white background */ 
+  background: var(--bg);
   color: var(--text); 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -750,9 +864,84 @@ let MESSAGES = [];
 const API = 'https://velontri-chatbot-backend.onrender.com/api/chat';
 
 // ═══════════════════════════════════════════════════════════
+// DARK MODE DETECTION FROM PARENT SITE
+// ═══════════════════════════════════════════════════════════
+function detectParentDarkMode() {
+  try {
+    // Check if we're in an iframe
+    const isIframe = window.self !== window.top;
+    
+    if (isIframe) {
+      // Try to access parent document (same-origin only)
+      try {
+        const parentDoc = window.parent.document;
+        const parentHtml = parentDoc.documentElement;
+        const parentBody = parentDoc.body;
+        
+        // Check common dark mode indicators
+        const isDark = 
+          parentHtml.classList.contains('dark') ||
+          parentHtml.classList.contains('dark-mode') ||
+          parentHtml.getAttribute('data-theme') === 'dark' ||
+          parentBody.classList.contains('dark') ||
+          parentBody.classList.contains('dark-mode') ||
+          parentBody.getAttribute('data-theme') === 'dark';
+        
+        // Apply dark mode class to our html element
+        if (isDark) {
+          document.documentElement.classList.add('dark-mode');
+        } else {
+          document.documentElement.classList.remove('dark-mode');
+        }
+        
+        // Watch for changes in parent
+        const observer = new MutationObserver(() => {
+          const nowDark = 
+            parentHtml.classList.contains('dark') ||
+            parentHtml.classList.contains('dark-mode') ||
+            parentHtml.getAttribute('data-theme') === 'dark' ||
+            parentBody.classList.contains('dark') ||
+            parentBody.classList.contains('dark-mode') ||
+            parentBody.getAttribute('data-theme') === 'dark';
+          
+          if (nowDark) {
+            document.documentElement.classList.add('dark-mode');
+          } else {
+            document.documentElement.classList.remove('dark-mode');
+          }
+        });
+        
+        // Observe both html and body for class/attribute changes
+        observer.observe(parentHtml, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+        observer.observe(parentBody, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+        
+      } catch (e) {
+        // Cross-origin iframe - use postMessage communication
+        console.log('[Velo] Cross-origin iframe detected, using fallback');
+        // Listen for messages from parent about dark mode
+        window.addEventListener('message', (event) => {
+          if (event.data && event.data.type === 'darkModeChange') {
+            if (event.data.isDark) {
+              document.documentElement.classList.add('dark-mode');
+            } else {
+              document.documentElement.classList.remove('dark-mode');
+            }
+          }
+        });
+      }
+    }
+  } catch (e) {
+    console.log('[Velo] Dark mode detection:', e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', () => {
+  // Detect parent site dark mode
+  detectParentDarkMode();
+  
   loadConversations();
   showEmpty();
   
