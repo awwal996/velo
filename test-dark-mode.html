@@ -287,9 +287,38 @@
           window.location.href = event.data.url;
         }
       }
+      
+      // Respond to dark mode status requests
+      if (event.data && event.data.type === 'requestDarkMode') {
+        console.log('[Parent] 📨 Chatbot requested dark mode status');
+        const isDark = document.body.classList.contains('dark-mode');
+        const chatbotIframe = document.querySelector('iframe');
+        if (chatbotIframe) {
+          chatbotIframe.contentWindow.postMessage({
+            type: 'darkModeChange',
+            isDark: isDark
+          }, '*');
+          console.log('[Parent] 📤 Sent dark mode status:', isDark);
+        }
+      }
     });
 
     console.log('[Parent] ✅ Listening for chatbot navigation requests');
+    console.log('[Parent] ✅ Listening for chatbot dark mode requests');
+    
+    // Send initial dark mode state when iframe loads
+    const iframe = document.querySelector('iframe');
+    if (iframe) {
+      iframe.addEventListener('load', () => {
+        console.log('[Parent] 🔄 Chatbot iframe loaded, sending dark mode status...');
+        const isDark = document.body.classList.contains('dark-mode');
+        iframe.contentWindow.postMessage({
+          type: 'darkModeChange',
+          isDark: isDark
+        }, '*');
+        console.log('[Parent] 📤 Sent initial dark mode status:', isDark);
+      });
+    }
   </script>
 </body>
 </html>

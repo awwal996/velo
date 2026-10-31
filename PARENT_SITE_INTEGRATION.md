@@ -70,6 +70,8 @@ Add this iframe code to your website where you want the chatbot to appear:
 
 ## 🌓 Step 2: Dark Mode Integration
 
+**IMPORTANT:** The chatbot **IGNORES system dark mode preferences**. It ONLY detects the parent website's theme.
+
 The chatbot automatically detects these patterns on your site:
 
 ### Automatic Detection (No Code Needed)
@@ -136,25 +138,35 @@ The chatbot needs to navigate the parent page when users click on listings.
 Add this message listener to handle navigation requests:
 
 ```javascript
-// Listen for navigation requests from chatbot
+// Listen for requests from chatbot
 window.addEventListener('message', (event) => {
   // Security: Verify origin in production
   // if (event.origin !== 'https://your-chatbot-url.onrender.com') return;
   
+  // Handle navigation
   if (event.data && event.data.type === 'navigate') {
-    const url = event.data.url;
-    
-    // Option 1: Direct navigation (seamless UX)
-    window.location.href = url;
-    
-    // Option 2: Optional confirmation (more control)
-    // if (confirm('View this listing?')) {
-    //   window.location.href = url;
-    // }
-    
-    // Option 3: Open in new tab (fallback)
-    // window.open(url, '_blank');
+    window.location.href = event.data.url;
   }
+  
+  // Respond to dark mode requests
+  if (event.data && event.data.type === 'requestDarkMode') {
+    const chatbotIframe = document.getElementById('velontri-chatbot');
+    const isDark = document.body.classList.contains('dark-mode');
+    chatbotIframe.contentWindow.postMessage({
+      type: 'darkModeChange',
+      isDark: isDark
+    }, '*');
+  }
+});
+
+// Send initial dark mode state when chatbot loads
+const chatbotIframe = document.getElementById('velontri-chatbot');
+chatbotIframe.addEventListener('load', () => {
+  const isDark = document.body.classList.contains('dark-mode');
+  chatbotIframe.contentWindow.postMessage({
+    type: 'darkModeChange',
+    isDark: isDark
+  }, '*');
 });
 ```
 

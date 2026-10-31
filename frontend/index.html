@@ -64,68 +64,11 @@
 }
 
 /* ══════════════════════════════════════════════════════════════
-   DARK MODE - Auto-detects system preference OR parent site
+   DARK MODE - ONLY detects parent site (velontri.pxxl.click)
+   Does NOT use system preference - controlled by .dark-mode class
 ══════════════════════════════════════════════════════════════ */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --primary: #6366F1;      /* Bright Indigo for dark mode */
-    --primary-light: #818CF8;
-    --primary-dark: #4F46E5;
-    --primary-glow: rgba(99, 102, 241, 0.25);
-    --primary-soft: rgba(99, 102, 241, 0.12);
-    
-    --accent: #A78BFA;
-    --accent-light: #C4B5FD;
-    --accent-glow: rgba(167, 139, 250, 0.2);
-    
-    --success: #6366F1;
-    --warning: #F59E0B;
-    --error: #F87171;
-    --whatsapp: #25D366;
-    
-    /* Dark backgrounds */
-    --bg: #0a0a0a;
-    --bg-1: #1a1a1a;
-    --bg-2: #2a2a2a;
-    --bg-3: #3a3a3a;
-    --card: #1a1a1a;
-    --input: #2a2a2a;
-    
-    /* Dark borders */
-    --border: #2a2a2a;
-    --border-medium: #3a3a3a;
-    --border-dark: #4a4a4a;
-    
-    /* Dark text */
-    --text: #F8F9FA;
-    --text-secondary: #ADB5BD;
-    --text-tertiary: #6C757D;
-    
-    /* Dark shadows - more subtle */
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
-    --shadow-xl: 0 20px 35px -10px rgba(0, 0, 0, 0.7);
-  }
-  
-  /* Dark mode image adjustments */
-  img:not(.logo) {
-    opacity: 0.9;
-  }
-  
-  /* Glassmorphism effect in dark mode */
-  #header {
-    background: rgba(26, 26, 26, 0.8);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-  }
-  
-  .modal {
-    background: rgba(10, 10, 10, 0.8);
-  }
-}
 
-/* Manual dark mode class (set by JavaScript detection) */
+/* Dark mode class (set by JavaScript detection of parent site) */
 .dark-mode {
   --primary: #6366F1;
   --primary-light: #818CF8;
@@ -865,9 +808,16 @@ const API = 'https://velontri-chatbot-backend.onrender.com/api/chat';
 
 // ═══════════════════════════════════════════════════════════
 // DARK MODE DETECTION FROM PARENT SITE
+// IMPORTANT: Only detects parent site, NOT system preference
 // ═══════════════════════════════════════════════════════════
 function detectParentDarkMode() {
   console.log('[Velo Dark Mode] Starting dark mode detection...');
+  console.log('[Velo Dark Mode] ⚠️ System preference will be IGNORED');
+  console.log('[Velo Dark Mode] ✅ Only detecting velontri.pxxl.click theme');
+  
+  // Force light mode initially (remove any system-based dark mode)
+  document.documentElement.classList.remove('dark-mode');
+  console.log('[Velo Dark Mode] ✅ Initialized to LIGHT mode (default)');
   
   try {
     // Check if we're in an iframe
@@ -875,7 +825,8 @@ function detectParentDarkMode() {
     console.log('[Velo Dark Mode] Running in iframe:', isIframe);
     
     if (!isIframe) {
-      console.log('[Velo Dark Mode] Not in iframe, using system preferences only');
+      console.log('[Velo Dark Mode] ⚠️ Not in iframe, staying in LIGHT mode');
+      console.log('[Velo Dark Mode] (Will only use dark mode when embedded in velontri.pxxl.click)');
       return;
     }
     
@@ -885,7 +836,7 @@ function detectParentDarkMode() {
       const parentHtml = parentDoc.documentElement;
       const parentBody = parentDoc.body;
       
-      console.log('[Velo Dark Mode] Successfully accessed parent document (same-origin)');
+      console.log('[Velo Dark Mode] ✅ Successfully accessed parent document (same-origin)');
       console.log('[Velo Dark Mode] Parent HTML classes:', parentHtml.className);
       console.log('[Velo Dark Mode] Parent HTML data-theme:', parentHtml.getAttribute('data-theme'));
       console.log('[Velo Dark Mode] Parent BODY classes:', parentBody.className);
@@ -901,7 +852,7 @@ function detectParentDarkMode() {
           parentBody.classList.contains('dark-mode') ||
           parentBody.getAttribute('data-theme') === 'dark';
         
-        console.log('[Velo Dark Mode] Dark mode detected:', isDark);
+        console.log('[Velo Dark Mode] Parent site dark mode status:', isDark);
         return isDark;
       }
       
@@ -909,17 +860,21 @@ function detectParentDarkMode() {
       const initialDark = checkDarkMode();
       if (initialDark) {
         document.documentElement.classList.add('dark-mode');
-        console.log('[Velo Dark Mode] ✅ Applied dark-mode class');
+        console.log('[Velo Dark Mode] ✅ Applied DARK mode (parent is dark)');
       } else {
         document.documentElement.classList.remove('dark-mode');
-        console.log('[Velo Dark Mode] ✅ Removed dark-mode class (light mode)');
+        console.log('[Velo Dark Mode] ✅ Keeping LIGHT mode (parent is light)');
       }
       
       // Watch for changes in parent
       const observer = new MutationObserver((mutations) => {
-        console.log('[Velo Dark Mode] 🔄 Mutation detected in parent!');
+        console.log('[Velo Dark Mode] 🔄 Parent site theme changed!');
         mutations.forEach(mutation => {
           console.log('[Velo Dark Mode] Changed:', mutation.type, mutation.attributeName, mutation.target.nodeName);
+          if (mutation.oldValue !== mutation.target.getAttribute(mutation.attributeName)) {
+            console.log('[Velo Dark Mode]   Old:', mutation.oldValue);
+            console.log('[Velo Dark Mode]   New:', mutation.target.getAttribute(mutation.attributeName));
+          }
         });
         
         const nowDark = checkDarkMode();
@@ -951,6 +906,7 @@ function detectParentDarkMode() {
       // Cross-origin iframe - use postMessage communication
       console.warn('[Velo Dark Mode] ⚠️ Cross-origin iframe detected:', e.message);
       console.log('[Velo Dark Mode] Listening for postMessage from parent...');
+      console.log('[Velo Dark Mode] Parent site needs to send {type: "darkModeChange", isDark: boolean}');
       
       // Listen for messages from parent about dark mode
       window.addEventListener('message', (event) => {
@@ -961,10 +917,10 @@ function detectParentDarkMode() {
           
           if (event.data.isDark) {
             document.documentElement.classList.add('dark-mode');
-            console.log('[Velo Dark Mode] ✅ Applied dark-mode via postMessage');
+            console.log('[Velo Dark Mode] ✅ Applied DARK mode via postMessage');
           } else {
             document.documentElement.classList.remove('dark-mode');
-            console.log('[Velo Dark Mode] ✅ Removed dark-mode via postMessage');
+            console.log('[Velo Dark Mode] ✅ Applied LIGHT mode via postMessage');
           }
         }
       });
@@ -985,6 +941,11 @@ function detectParentDarkMode() {
 // ═══════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════
+
+// Run dark mode detection IMMEDIATELY (before DOM loads)
+// This ensures we start in the correct mode
+detectParentDarkMode();
+
 window.addEventListener('DOMContentLoaded', () => {
   console.log('[Velo] ========================================');
   console.log('[Velo] Chatbot initializing...');
@@ -992,7 +953,7 @@ window.addEventListener('DOMContentLoaded', () => {
   console.log('[Velo] Window location:', window.location.href);
   console.log('[Velo] ========================================');
   
-  // Detect parent site dark mode
+  // Detect parent site dark mode again (in case it changed)
   detectParentDarkMode();
   
   // Log current state after detection
