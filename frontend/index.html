@@ -1319,6 +1319,48 @@ function quickSearch(query) {
 // ═══════════════════════════════════════════════════════════
 // LISTINGS
 // ═══════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION - Smart navigation for iframe context
+// ═══════════════════════════════════════════════════════════
+function navigateToListing(url) {
+  console.log('[Velo Nav] Navigating to:', url);
+  
+  try {
+    // Check if we're in an iframe
+    const isIframe = window.self !== window.top;
+    
+    if (isIframe) {
+      // Try to navigate parent window (same-origin)
+      try {
+        window.top.location.href = url;
+        console.log('[Velo Nav] ✅ Navigated parent window');
+        return;
+      } catch (e) {
+        // Cross-origin - use postMessage to ask parent to navigate
+        console.log('[Velo Nav] Cross-origin detected, using postMessage');
+        window.parent.postMessage({
+          type: 'navigate',
+          url: url
+        }, '*');
+        
+        // Fallback: open in new tab after short delay if parent doesn't respond
+        setTimeout(() => {
+          console.log('[Velo Nav] ⚠️ Fallback: Opening in new tab');
+          window.open(url, '_blank');
+        }, 500);
+      }
+    } else {
+      // Standalone - just navigate normally
+      window.location.href = url;
+      console.log('[Velo Nav] ✅ Navigated standalone window');
+    }
+  } catch (err) {
+    console.error('[Velo Nav] ❌ Navigation error:', err);
+    // Final fallback
+    window.open(url, '_blank');
+  }
+}
+
 function renderListing(l) {
   const cond = l.condition?.toLowerCase();
   const bcls = cond === 'new' ? 'bnew' : cond === 'refurbished' ? 'brefurb' : 'bused';
@@ -1328,7 +1370,7 @@ function renderListing(l) {
   const contactHref = l.contact_url || l.seller_contact_fallback || l.listing_url;
   const isDirectWA = !!l.contact_url;
 
-  return `<div class="lcard" onclick="window.open('${esc(l.listing_url)}', '_blank')">
+  return `<div class="lcard" onclick="navigateToListing('${esc(l.listing_url)}')">
     ${l.image_url
       ? `<img class="cimg" src="${esc(l.image_url)}" alt="${esc(l.title)}" onerror="this.outerHTML='<div class=\\'ciph\\'>📦</div>'">`
       : `<div class="ciph">📦</div>`}

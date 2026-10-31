@@ -212,10 +212,13 @@
       <ol>
         <li>Make sure the chatbot is running on <code>http://localhost:3000</code></li>
         <li>Open the browser's Developer Console (F12 or Ctrl+Shift+I)</li>
-        <li>Click the <strong>"Toggle Dark Mode"</strong> button above</li>
+        <li><strong>Dark Mode Test:</strong> Click the <strong>"Toggle Dark Mode"</strong> button above</li>
         <li>Watch the console logs - you should see <code>[Velo Dark Mode]</code> messages</li>
         <li>The chatbot background should change from white to dark automatically</li>
-        <li>Toggle multiple times to verify it syncs correctly</li>
+        <li><strong>Navigation Test:</strong> Search for something in the chatbot (e.g., "cars")</li>
+        <li>Click on a listing card - it should show a confirmation dialog</li>
+        <li>In production, this will navigate the parent page (no new tab)</li>
+        <li>Toggle multiple times to verify everything syncs correctly</li>
       </ol>
     </div>
   </div>
@@ -271,6 +274,22 @@
     });
 
     observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
+    // Listen for navigation requests from chatbot iframe
+    window.addEventListener('message', (event) => {
+      console.log('[Parent] 📨 Received message:', event.data);
+      
+      if (event.data && event.data.type === 'navigate') {
+        console.log('[Parent] 🔗 Navigation request to:', event.data.url);
+        
+        // Confirm with user (in production, remove this or auto-navigate)
+        if (confirm(`Chatbot wants to navigate to:\n\n${event.data.url}\n\nAllow?`)) {
+          window.location.href = event.data.url;
+        }
+      }
+    });
+
+    console.log('[Parent] ✅ Listening for chatbot navigation requests');
   </script>
 </body>
 </html>
