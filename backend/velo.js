@@ -16,8 +16,30 @@ function getOpenAI() {
   const key = process.env.OPENAI_API_KEY;
   if (!key) return null;
   const { OpenAI } = require('openai');
-  _openai = new OpenAI({ apiKey: key });
+  _openai = new OpenAI({ apiKey: key, timeout: 15000 }); // Add default timeout
   return _openai;
+}
+
+// ── Response Cache for instant replies ──────────────────────
+const responseCache = new Map();
+const CACHE_TTL = 3600000; // 1 hour
+
+function getCachedResponse(key) {
+  const cached = responseCache.get(key);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.response;
+  }
+  responseCache.delete(key);
+  return null;
+}
+
+function setCachedResponse(key, response) {
+  // Limit cache size
+  if (responseCache.size > 100) {
+    const firstKey = responseCache.keys().next().value;
+    responseCache.delete(firstKey);
+  }
+  responseCache.set(key, { response, timestamp: Date.now() });
 }
 
 // ============================================================
@@ -247,15 +269,21 @@ async function runGPT4o(convId, sessionId, userMessage) {
     let response;
     try {
       response = await openai.chat.completions.create({
-        model:       process.env.OPENAI_MODEL || 'gpt-4o',
+        model:       process.env.OPENAI_MODEL || 'gpt-4o-mini', // Use mini for speed
         messages:    allMessages,
         tools:       TOOLS,
         tool_choice: 'auto',
-        max_tokens:  1200,
+        max_tokens:  800, // Reduced for faster responses
         temperature: 0.5,
+        timeout:     15000, // 15 second OpenAI timeout
       });
     } catch (err) {
       console.error('[Velo GPT error]', err.message);
+      // If timeout or rate limit, immediately fall back to built-in
+      if (err.code === 'ETIMEDOUT' || err.status === 429 || err.message.includes('timeout')) {
+        console.log('[Velo] OpenAI timeout/rate limit - switching to built-in engine');
+        return runBuiltIn(convId, sessionId, userMessage, true);
+      }
       return runBuiltIn(convId, sessionId, userMessage, true);
     }
 
@@ -274,7 +302,7 @@ async function runGPT4o(convId, sessionId, userMessage) {
         if (title) await db.setConversationTitle(convId, title);
       }
 
-      // Maybe summarize old messages
+      // Maybe summarize old messages (async, don't await)
       maybeSummarize(convId).catch(() => {});
 
       return {
@@ -285,7 +313,7 @@ async function runGPT4o(convId, sessionId, userMessage) {
       };
     }
 
-    // Execute tool calls
+    // Execute tool calls with timeout
     const toolMsgs = [];
     for (const tc of choice.message.tool_calls) {
       let args = {};
@@ -294,9 +322,17 @@ async function runGPT4o(convId, sessionId, userMessage) {
 
       let result;
       try {
-        result = await searchListings(args);
+        // Add timeout to search as well
+        const searchTimeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Search timeout')), 10000)
+        );
+        result = await Promise.race([
+          searchListings(args),
+          searchTimeout
+        ]);
       } catch (err) {
-        result = { listings: [], total: 0, error: 'Marketplace unavailable' };
+        console.error('[Velo] Search error:', err.message);
+        result = { listings: [], total: 0, error: 'Marketplace temporarily unavailable' };
       }
 
       if (result.listings?.length) toolResults.push(result);
@@ -515,7 +551,7 @@ function platformAnswer(text) {
 }
 
 // ── Chat responses ────────────────────────────────────────────
-function chatResponse(text, searchCount) {
+async function chatResponse(text, searchCount, sessionId, userMessage) {
   const l = text.toLowerCase().trim();
   
   // Acknowledgements / short reactions — context matters!
@@ -625,7 +661,18 @@ Want me to help you find something specific on Velontri?`;
       const greeting = userName ? `Nice to meet you, ${userName}! ` : `Nice to meet you! `;
       return `${greeting}I'm Velo, an AI assistant created specifically for Velontri marketplace. 
 
-My purpose is to help you:`
+My purpose is to help you:
+• Find any product on Velontri (phones, cars, property, electronics, fashion, etc.)
+• Filter by price, location, and condition
+• Connect you directly with sellers via WhatsApp
+• Answer questions about how Velontri works
+
+I am here 24/7 to make your shopping experience smooth and enjoyable. What would you like to know or find?`;
+    }
+    
+    return `Hello! I am Velo, an AI assistant created specifically for Velontri marketplace. 
+
+My purpose is to help you:
 • Find any product on Velontri (phones, cars, property, electronics, fashion, etc.)
 • Filter by price, location, and condition
 • Connect you directly with sellers via WhatsApp
@@ -757,7 +804,8 @@ async function runBuiltIn(convId, sessionId, userMessage, fromFallback = false) 
       m.role === 'assistant' && 
       (m.content.includes('Found') || m.content.includes('listing'))
     ).length;
-    return respond(chatResponse(userMessage, searchCount));
+    const response = await chatResponse(userMessage, searchCount, sessionId, userMessage);
+    return respond(response);
   }
 
   // ── SEARCH ────────────────────────────────────────────────
@@ -931,8 +979,7 @@ async function chat(sessionId, userMessage, existingConvId = null) {
     if (!conv || conv.session_id !== sessionId) convId = null; // security: reject foreign conv
   }
   if (!convId) {
-   convId = await db.createConversation(sessionId, userMessage);
-
+    convId = await db.createConversation(sessionId, userMessage);
   }
 
   if (getOpenAI()) return runGPT4o(convId, sessionId, userMessage);

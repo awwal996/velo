@@ -1155,7 +1155,7 @@ function removeTyping() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// SEND MESSAGE
+// SEND MESSAGE - Optimized with retry and timeout handling
 // ═══════════════════════════════════════════════════════════
 async function sendMessage(e) {
   e.preventDefault();
@@ -1173,35 +1173,80 @@ async function sendMessage(e) {
   // Show typing
   showTyping();
 
-  try {
-    const res = await fetch(API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        session_id: SESSION_ID,
-        conversation_id: CURRENT_CONV_ID,
-      }),
-    });
+  // Retry logic
+  let attempts = 0;
+  const maxAttempts = 3;
+  
+  while (attempts < maxAttempts) {
+    attempts++;
+    
+    try {
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+      
+      const res = await fetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          session_id: SESSION_ID,
+          conversation_id: CURRENT_CONV_ID,
+        }),
+        signal: controller.signal,
+      });
 
-    const data = await res.json();
-    removeTyping();
+      clearTimeout(timeoutId);
 
-    if (data.error) {
-      appendMessage('assistant', `⚠️ ${data.error}`);
-    } else {
-      CURRENT_CONV_ID = data.conversation_id;
-      appendMessage('assistant', data.text, data.listings || []);
-      loadConversations();
+      const data = await res.json();
+      removeTyping();
+
+      if (data.error) {
+        // Check if it's a timeout error
+        if (data.timeout && attempts < maxAttempts) {
+          console.log(`Attempt ${attempts} timed out, retrying...`);
+          showTyping();
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1s before retry
+          continue;
+        }
+        appendMessage('assistant', `⚠️ ${data.error}`);
+        break;
+      } else {
+        CURRENT_CONV_ID = data.conversation_id;
+        appendMessage('assistant', data.text, data.listings || []);
+        loadConversations();
+        break;
+      }
+    } catch (err) {
+      console.error('Send error:', err);
+      removeTyping();
+      
+      // Handle different error types
+      if (err.name === 'AbortError') {
+        if (attempts < maxAttempts) {
+          console.log(`Request timed out, attempt ${attempts}/${maxAttempts}, retrying...`);
+          showTyping();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        } else {
+          appendMessage('assistant', `⚠️ The request is taking longer than expected. The response will arrive shortly, or please try asking in a simpler way.`);
+        }
+      } else if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+        appendMessage('assistant', '⚠️ Connection issue. Please check your internet and try again.');
+      } else {
+        if (attempts < maxAttempts) {
+          showTyping();
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          continue;
+        }
+        appendMessage('assistant', '⚠️ Something went wrong. Please try again.');
+      }
+      break;
     }
-  } catch (err) {
-    removeTyping();
-    appendMessage('assistant', '⚠️ Something went wrong. Check your connection and try again.');
-    console.error('Send error:', err);
-  } finally {
-    $input.disabled = false;
-    $input.focus();
   }
+  
+  $input.disabled = false;
+  $input.focus();
 }
 
 function quickSearch(query) {

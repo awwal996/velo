@@ -7,6 +7,12 @@ const db   = require('../db-postgres');
 
 // POST /api/chat — main conversation endpoint
 router.post('/', async (req, res) => {
+  // Set aggressive timeout to prevent hanging
+  req.setTimeout(25000); // 25 second timeout
+  
+  // Send early headers for potential streaming
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
   try {
     const { message, session_id, conversation_id } = req.body;
     if (!message || typeof message !== 'string' || !message.trim())
@@ -17,7 +23,14 @@ router.post('/', async (req, res) => {
     const sessionId = (session_id && session_id.length < 128) ? session_id : crypto.randomUUID();
     const convId    = (conversation_id && conversation_id.length < 64) ? conversation_id : null;
 
-    const result = await velo.chat(sessionId, message.trim(), convId);
+    // Race condition: timeout vs. actual processing
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('TIMEOUT')), 20000) // 20s internal timeout
+    );
+    
+    const chatPromise = velo.chat(sessionId, message.trim(), convId);
+    
+    const result = await Promise.race([chatPromise, timeoutPromise]);
 
     return res.json({
       session_id:      sessionId,
@@ -27,7 +40,16 @@ router.post('/', async (req, res) => {
       total:           result.total || 0,
     });
   } catch (err) {
-    console.error('[chat route]', err);
+    console.error('[chat route]', err.message);
+    
+    // Handle timeout specifically
+    if (err.message === 'TIMEOUT') {
+      return res.status(504).json({ 
+        error: 'Response took too long. Please try a simpler query or try again.',
+        timeout: true 
+      });
+    }
+    
     return res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
 });
