@@ -1267,8 +1267,13 @@ async function deleteConversation(convId) {
   const conv = CONVERSATIONS.find(c => c.id === convId);
   const title = conv?.title || 'this conversation';
   
+  console.log('[Velo] Attempting to delete conversation:', convId);
+  
   // Better confirmation message
-  if (!confirm(`Delete "${title}"?\n\nThis action cannot be undone.`)) return;
+  if (!confirm(`Delete "${title}"?\n\nThis action cannot be undone.`)) {
+    console.log('[Velo] Delete cancelled by user');
+    return;
+  }
   
   try {
     // Show deleting state
@@ -1279,13 +1284,22 @@ async function deleteConversation(convId) {
     }
     
     // Delete from backend
+    console.log('[Velo] Sending DELETE request to:', `${API}/conversations/${convId}?session_id=${SESSION_ID}`);
+    
     const res = await fetch(`${API}/conversations/${convId}?session_id=${SESSION_ID}`, { 
       method: 'DELETE' 
     });
     
+    console.log('[Velo] DELETE response status:', res.status);
+    
     if (!res.ok) {
-      throw new Error('Failed to delete conversation');
+      const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+      console.error('[Velo] DELETE failed:', errorData);
+      throw new Error(errorData.error || 'Failed to delete conversation');
     }
+    
+    const responseData = await res.json();
+    console.log('[Velo] DELETE response:', responseData);
     
     // If we just deleted the active conversation, clear the view
     if (CURRENT_CONV_ID === convId) {
@@ -1307,7 +1321,7 @@ async function deleteConversation(convId) {
     console.error('[Velo] ❌ Delete conversation error:', err);
     
     // Show error to user
-    alert('Failed to delete conversation. Please try again.');
+    alert(`Failed to delete conversation: ${err.message}\n\nPlease try again.`);
     
     // Reload conversations to restore UI state
     loadConversations();

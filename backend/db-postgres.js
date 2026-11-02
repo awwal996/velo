@@ -183,23 +183,44 @@ async function listConversations(sessionId, limit = 50) {
 }
 
 
-async function deleteConversation(conversationId) {
+async function deleteConversation(conversationId, sessionId) {
   if (!supabase) return true;
   
   try {
-    // Soft delete
+    console.log('[DB] Deleting conversation:', conversationId, 'for session:', sessionId);
+    
+    // First verify the conversation belongs to this session
+    const { data: conv, error: fetchError } = await supabase
+      .from('conversations')
+      .select('conversation_id, session_id')
+      .eq('conversation_id', conversationId)
+      .eq('session_id', sessionId)
+      .single();
+    
+    if (fetchError || !conv) {
+      console.error('[DB] Conversation not found or unauthorized:', conversationId);
+      return false;
+    }
+    
+    // Soft delete the conversation
     const { error } = await supabase
       .from('conversations')
       .update({
         is_active: false,
         deleted_at: new Date().toISOString()
       })
-      .eq('conversation_id', conversationId);
+      .eq('conversation_id', conversationId)
+      .eq('session_id', sessionId);
     
-    if (error) throw error;
+    if (error) {
+      console.error('[DB] Delete conversation error:', error.message);
+      throw error;
+    }
+    
+    console.log('[DB] ✅ Conversation deleted successfully:', conversationId);
     return true;
   } catch (err) {
-    console.error('Delete conversation error:', err.message);
+    console.error('[DB] Delete conversation error:', err.message);
     return false;
   }
 }

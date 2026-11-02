@@ -76,9 +76,34 @@ router.get('/conversations/:id/messages', async (req, res) => {
 // DELETE /api/chat/conversations/:id — delete conversation
 router.delete('/conversations/:id', async (req, res) => {
   const sessionId = req.query.session_id;
-  if (!sessionId) return res.status(400).json({ error: 'session_id required.' });
-  await db.deleteConversation(req.params.id, sessionId);
-  res.json({ ok: true });
+  const convId = req.params.id;
+  
+  console.log('[API] DELETE conversation request:', { convId, sessionId });
+  
+  if (!sessionId) {
+    console.error('[API] Missing session_id');
+    return res.status(400).json({ error: 'session_id required.' });
+  }
+  
+  if (!convId) {
+    console.error('[API] Missing conversation ID');
+    return res.status(400).json({ error: 'conversation_id required.' });
+  }
+  
+  try {
+    const result = await db.deleteConversation(convId, sessionId);
+    
+    if (!result) {
+      console.error('[API] Delete failed - conversation not found or unauthorized');
+      return res.status(404).json({ error: 'Conversation not found or unauthorized.' });
+    }
+    
+    console.log('[API] ✅ Conversation deleted successfully:', convId);
+    res.json({ ok: true, message: 'Conversation deleted successfully' });
+  } catch (err) {
+    console.error('[API] Delete conversation error:', err);
+    res.status(500).json({ error: 'Failed to delete conversation.' });
+  }
 });
 
 // GET /api/chat/memories — get memories for session
