@@ -1246,26 +1246,52 @@ window.addEventListener('DOMContentLoaded', () => {
 let pendingDeleteAction = null;
 
 function showDeleteConfirmation(message, onConfirm) {
+  console.log('[Velo Modal] showDeleteConfirmation called');
+  console.log('[Velo Modal] Message:', message);
+  
   const modal = document.getElementById('delete-modal');
   const messageEl = document.getElementById('delete-modal-message');
   const confirmBtn = document.getElementById('confirm-delete-btn');
   
+  console.log('[Velo Modal] Modal element:', modal);
+  console.log('[Velo Modal] Message element:', messageEl);
+  console.log('[Velo Modal] Confirm button:', confirmBtn);
+  
+  if (!modal || !messageEl || !confirmBtn) {
+    console.error('[Velo Modal] ❌ Modal elements not found!');
+    console.error('[Velo Modal] Modal:', !!modal, 'MessageEl:', !!messageEl, 'ConfirmBtn:', !!confirmBtn);
+    return;
+  }
+  
   messageEl.textContent = message;
   modal.classList.add('open');
+  
+  console.log('[Velo Modal] Modal classes:', modal.className);
+  console.log('[Velo Modal] Modal should be visible now');
   
   // Remove old listeners
   const newConfirmBtn = confirmBtn.cloneNode(true);
   confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
   
+  console.log('[Velo Modal] Added new confirm button');
+  
   // Add new listener
   newConfirmBtn.addEventListener('click', () => {
+    console.log('[Velo Modal] Confirm button clicked!');
     closeDeleteModal();
     onConfirm();
   });
+  
+  console.log('[Velo Modal] Event listener attached');
 }
 
 function closeDeleteModal() {
-  document.getElementById('delete-modal').classList.remove('open');
+  console.log('[Velo Modal] Closing delete modal');
+  const modal = document.getElementById('delete-modal');
+  if (modal) {
+    modal.classList.remove('open');
+    console.log('[Velo Modal] Modal closed');
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1318,16 +1344,21 @@ async function loadConversation(convId) {
 }
 
 async function deleteConversation(convId) {
+  console.log('[Velo] deleteConversation called with ID:', convId);
+  
   // Find the conversation title for better confirmation message
   const conv = CONVERSATIONS.find(c => c.id === convId);
   const title = conv?.title || 'this conversation';
   
+  console.log('[Velo] Found conversation:', conv);
   console.log('[Velo] Attempting to delete conversation:', convId);
   
   // Show custom modal instead of confirm() (which doesn't work in sandboxed iframes)
+  console.log('[Velo] Calling showDeleteConfirmation...');
   showDeleteConfirmation(
     `Delete "${title}"?\n\nThis action cannot be undone.`,
     async () => {
+      console.log('[Velo] Delete confirmed by user');
       try {
         // Show deleting state
         const convElement = document.querySelector(`.conv-item[onclick*="${convId}"]`);
@@ -1384,6 +1415,8 @@ async function deleteConversation(convId) {
       }
     }
   );
+  
+  console.log('[Velo] showDeleteConfirmation should have been called');
 }
 
 async function clearAllConversations() {
