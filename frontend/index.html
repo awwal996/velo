@@ -830,6 +830,33 @@ img {
   </div>
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div id="delete-modal" class="modal">
+  <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-head">
+      <h2>⚠️ Delete Conversation?</h2>
+      <button class="modal-close" onclick="closeDeleteModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="delete-modal-message" style="margin-bottom: 16px; line-height: 1.6;">
+        This action cannot be undone.
+      </p>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeDeleteModal()" style="background: var(--bg-3); color: var(--text);">
+        Cancel
+      </button>
+      <button class="modal-btn modal-btn-danger" id="confirm-delete-btn">
+        Delete
+      </button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════════════════════
 // STATE
@@ -1214,6 +1241,34 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 // ═══════════════════════════════════════════════════════════
+// CUSTOM CONFIRMATION MODAL (for sandboxed iframes)
+// ═══════════════════════════════════════════════════════════
+let pendingDeleteAction = null;
+
+function showDeleteConfirmation(message, onConfirm) {
+  const modal = document.getElementById('delete-modal');
+  const messageEl = document.getElementById('delete-modal-message');
+  const confirmBtn = document.getElementById('confirm-delete-btn');
+  
+  messageEl.textContent = message;
+  modal.classList.add('open');
+  
+  // Remove old listeners
+  const newConfirmBtn = confirmBtn.cloneNode(true);
+  confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+  
+  // Add new listener
+  newConfirmBtn.addEventListener('click', () => {
+    closeDeleteModal();
+    onConfirm();
+  });
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════
 // CONVERSATIONS
 // ═══════════════════════════════════════════════════════════
 async function loadConversations() {
@@ -1269,137 +1324,135 @@ async function deleteConversation(convId) {
   
   console.log('[Velo] Attempting to delete conversation:', convId);
   
-  // Better confirmation message
-  if (!confirm(`Delete "${title}"?\n\nThis action cannot be undone.`)) {
-    console.log('[Velo] Delete cancelled by user');
-    return;
-  }
-  
-  try {
-    // Show deleting state
-    const convElement = document.querySelector(`.conv-item[onclick*="${convId}"]`);
-    if (convElement) {
-      convElement.style.opacity = '0.5';
-      convElement.style.pointerEvents = 'none';
+  // Show custom modal instead of confirm() (which doesn't work in sandboxed iframes)
+  showDeleteConfirmation(
+    `Delete "${title}"?\n\nThis action cannot be undone.`,
+    async () => {
+      try {
+        // Show deleting state
+        const convElement = document.querySelector(`.conv-item[onclick*="${convId}"]`);
+        if (convElement) {
+          convElement.style.opacity = '0.5';
+          convElement.style.pointerEvents = 'none';
+        }
+        
+        // Delete from backend
+        console.log('[Velo] Sending DELETE request to:', `${API}/conversations/${convId}?session_id=${SESSION_ID}`);
+        
+        const res = await fetch(`${API}/conversations/${convId}?session_id=${SESSION_ID}`, { 
+          method: 'DELETE' 
+        });
+        
+        console.log('[Velo] DELETE response status:', res.status);
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+          console.error('[Velo] DELETE failed:', errorData);
+          throw new Error(errorData.error || 'Failed to delete conversation');
+        }
+        
+        const responseData = await res.json();
+        console.log('[Velo] DELETE response:', responseData);
+        
+        // If we just deleted the active conversation, clear the view
+        if (CURRENT_CONV_ID === convId) {
+          CURRENT_CONV_ID = null;
+          MESSAGES = [];
+          showEmpty();
+        }
+        
+        // Remove from local array
+        CONVERSATIONS = CONVERSATIONS.filter(c => c.id !== convId);
+        
+        // Re-render sidebar
+        renderConversations();
+        
+        // Show success feedback
+        console.log('[Velo] ✅ Conversation deleted successfully');
+        
+      } catch (err) {
+        console.error('[Velo] ❌ Delete conversation error:', err);
+        
+        // Show error to user (also use custom modal)
+        showDeleteConfirmation(
+          `Failed to delete conversation: ${err.message}\n\nPlease try again.`,
+          () => {} // Just close on confirm
+        );
+        
+        // Reload conversations to restore UI state
+        loadConversations();
+      }
     }
-    
-    // Delete from backend
-    console.log('[Velo] Sending DELETE request to:', `${API}/conversations/${convId}?session_id=${SESSION_ID}`);
-    
-    const res = await fetch(`${API}/conversations/${convId}?session_id=${SESSION_ID}`, { 
-      method: 'DELETE' 
-    });
-    
-    console.log('[Velo] DELETE response status:', res.status);
-    
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
-      console.error('[Velo] DELETE failed:', errorData);
-      throw new Error(errorData.error || 'Failed to delete conversation');
-    }
-    
-    const responseData = await res.json();
-    console.log('[Velo] DELETE response:', responseData);
-    
-    // If we just deleted the active conversation, clear the view
-    if (CURRENT_CONV_ID === convId) {
-      CURRENT_CONV_ID = null;
-      MESSAGES = [];
-      showEmpty();
-    }
-    
-    // Remove from local array
-    CONVERSATIONS = CONVERSATIONS.filter(c => c.id !== convId);
-    
-    // Re-render sidebar
-    renderConversations();
-    
-    // Show success feedback
-    console.log('[Velo] ✅ Conversation deleted successfully');
-    
-  } catch (err) {
-    console.error('[Velo] ❌ Delete conversation error:', err);
-    
-    // Show error to user
-    alert(`Failed to delete conversation: ${err.message}\n\nPlease try again.`);
-    
-    // Reload conversations to restore UI state
-    loadConversations();
-  }
+  );
 }
 
 async function clearAllConversations() {
   const count = CONVERSATIONS.length;
   
   if (count === 0) {
-    alert('No conversations to delete.');
+    showDeleteConfirmation('No conversations to delete.', () => {});
     return;
   }
   
-  // Strong confirmation
-  const confirmed = confirm(
-    `⚠️ DELETE ALL CONVERSATIONS?\n\n` +
-    `This will permanently delete all ${count} conversation${count > 1 ? 's' : ''} and cannot be undone.\n\n` +
-    `Are you absolutely sure?`
+  // First confirmation
+  showDeleteConfirmation(
+    `⚠️ DELETE ALL CONVERSATIONS?\n\nThis will permanently delete all ${count} conversation${count > 1 ? 's' : ''} and cannot be undone.\n\nAre you absolutely sure?`,
+    () => {
+      // Second confirmation for safety
+      showDeleteConfirmation(
+        `Last chance!\n\nThis will delete EVERYTHING. Continue?`,
+        async () => {
+          try {
+            console.log('[Velo] 🗑️ Clearing all conversations...');
+            
+            // Show loading state
+            const btn = document.getElementById('clear-history-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span style="opacity:0.5">Deleting...</span>';
+            btn.disabled = true;
+            
+            // Delete all conversations
+            const deletePromises = CONVERSATIONS.map(c => 
+              fetch(`${API}/conversations/${c.id}?session_id=${SESSION_ID}`, { method: 'DELETE' })
+            );
+            
+            await Promise.all(deletePromises);
+            
+            // Clear local state
+            CONVERSATIONS = [];
+            CURRENT_CONV_ID = null;
+            MESSAGES = [];
+            
+            // Update UI
+            renderConversations();
+            showEmpty();
+            
+            // Restore button
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            
+            console.log('[Velo] ✅ All conversations deleted successfully');
+            
+            // Close mobile sidebar if open
+            document.getElementById('hamburger').classList.remove('open');
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebar-overlay').classList.remove('show');
+            
+          } catch (err) {
+            console.error('[Velo] ❌ Clear all error:', err);
+            showDeleteConfirmation('Failed to delete some conversations. Please try again.', () => {});
+            
+            // Reload to restore correct state
+            loadConversations();
+            
+            // Restore button
+            const btn = document.getElementById('clear-history-btn');
+            btn.disabled = false;
+          }
+        }
+      );
+    }
   );
-  
-  if (!confirmed) return;
-  
-  // Double confirmation for safety
-  const doubleCheck = confirm(
-    `Last chance!\n\n` +
-    `This will delete EVERYTHING. Continue?`
-  );
-  
-  if (!doubleCheck) return;
-  
-  try {
-    console.log('[Velo] 🗑️ Clearing all conversations...');
-    
-    // Show loading state
-    const btn = document.getElementById('clear-history-btn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span style="opacity:0.5">Deleting...</span>';
-    btn.disabled = true;
-    
-    // Delete all conversations
-    const deletePromises = CONVERSATIONS.map(c => 
-      fetch(`${API}/conversations/${c.id}?session_id=${SESSION_ID}`, { method: 'DELETE' })
-    );
-    
-    await Promise.all(deletePromises);
-    
-    // Clear local state
-    CONVERSATIONS = [];
-    CURRENT_CONV_ID = null;
-    MESSAGES = [];
-    
-    // Update UI
-    renderConversations();
-    showEmpty();
-    
-    // Restore button
-    btn.innerHTML = originalText;
-    btn.disabled = false;
-    
-    console.log('[Velo] ✅ All conversations deleted successfully');
-    
-    // Close mobile sidebar if open
-    document.getElementById('hamburger').classList.remove('open');
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sidebar-overlay').classList.remove('show');
-    
-  } catch (err) {
-    console.error('[Velo] ❌ Clear all error:', err);
-    alert('Failed to delete some conversations. Please try again.');
-    
-    // Reload to restore correct state
-    loadConversations();
-    
-    // Restore button
-    const btn = document.getElementById('clear-history-btn');
-    btn.disabled = false;
-  }
 }
 
 function newChat() {
@@ -1751,17 +1804,22 @@ async function deleteMemory(memId) {
 }
 
 async function clearAllMemories() {
-  if (!confirm('Delete all memories? This cannot be undone.')) return;
-  try {
-    await fetch(`${API}/memories/clear`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: SESSION_ID }),
-    });
-    openMemoriesModal(); // Refresh
-  } catch (err) {
-    console.error('Clear memories:', err);
-  }
+  showDeleteConfirmation(
+    'Delete all memories? This cannot be undone.',
+    async () => {
+      try {
+        await fetch(`${API}/memories/clear`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: SESSION_ID }),
+        });
+        openMemoriesModal(); // Refresh
+      } catch (err) {
+        console.error('Clear memories:', err);
+        showDeleteConfirmation('Failed to clear memories. Please try again.', () => {});
+      }
+    }
+  );
 }
 
 // ═══════════════════════════════════════════════════════════
