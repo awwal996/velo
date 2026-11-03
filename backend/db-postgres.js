@@ -157,10 +157,11 @@ async function listConversations(sessionId, limit = 50) {
   try {
     const { data, error } = await supabase
       .from('conversations')
-      .select('conversation_id, session_id, title, created_at, updated_at')
+      .select('conversation_id, session_id, title, is_pinned, created_at, updated_at')
       .eq('session_id', sessionId)
       .eq('is_active', true)
-      .order('updated_at', { ascending: false })
+      .order('is_pinned', { ascending: false })  // Pinned conversations first
+      .order('updated_at', { ascending: false }) // Then by most recent
       .limit(limit);
 
     if (error) {
@@ -173,6 +174,7 @@ async function listConversations(sessionId, limit = 50) {
       id: conv.conversation_id,
       session_id: conv.session_id,
       title: conv.title || 'New conversation',
+      is_pinned: conv.is_pinned || false,
       created_at: conv.created_at,
       updated_at: conv.updated_at
     }));
@@ -221,6 +223,49 @@ async function deleteConversation(conversationId, sessionId) {
     return true;
   } catch (err) {
     console.error('[DB] Delete conversation error:', err.message);
+    return false;
+  }
+}
+
+async function togglePinConversation(conversationId, sessionId, isPinned) {
+  if (!supabase) return true;
+  
+  try {
+    console.log('[DB] Toggling pin for conversation:', conversationId, 'to:', isPinned);
+    
+    // First verify the conversation belongs to this session
+    const { data: conv, error: fetchError } = await supabase
+      .from('conversations')
+      .select('conversation_id, session_id')
+      .eq('conversation_id', conversationId)
+      .eq('session_id', sessionId)
+      .eq('is_active', true)
+      .single();
+    
+    if (fetchError || !conv) {
+      console.error('[DB] Conversation not found or unauthorized:', conversationId);
+      return false;
+    }
+    
+    // Update pin status
+    const { error } = await supabase
+      .from('conversations')
+      .update({
+        is_pinned: isPinned,
+        updated_at: new Date().toISOString()
+      })
+      .eq('conversation_id', conversationId)
+      .eq('session_id', sessionId);
+    
+    if (error) {
+      console.error('[DB] Toggle pin error:', error.message);
+      throw error;
+    }
+    
+    console.log('[DB] ✅ Conversation pin toggled successfully:', conversationId, 'is_pinned:', isPinned);
+    return true;
+  } catch (err) {
+    console.error('[DB] Toggle pin error:', err.message);
     return false;
   }
 }
@@ -549,6 +594,7 @@ module.exports = {
   getConversation,
   listConversations,
   deleteConversation,
+  togglePinConversation,
   setConversationTitle,
   setConversationSummary,
   

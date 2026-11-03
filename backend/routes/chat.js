@@ -106,6 +106,45 @@ router.delete('/conversations/:id', async (req, res) => {
   }
 });
 
+// PATCH /api/chat/conversations/:id/pin — toggle pin conversation
+router.patch('/conversations/:id/pin', async (req, res) => {
+  const sessionId = req.query.session_id;
+  const convId = req.params.id;
+  const { is_pinned } = req.body;
+  
+  console.log('[API] PATCH pin conversation request:', { convId, sessionId, is_pinned });
+  
+  if (!sessionId) {
+    console.error('[API] Missing session_id');
+    return res.status(400).json({ error: 'session_id required.' });
+  }
+  
+  if (!convId) {
+    console.error('[API] Missing conversation ID');
+    return res.status(400).json({ error: 'conversation_id required.' });
+  }
+  
+  if (typeof is_pinned !== 'boolean') {
+    console.error('[API] Invalid is_pinned value');
+    return res.status(400).json({ error: 'is_pinned must be a boolean.' });
+  }
+  
+  try {
+    const result = await db.togglePinConversation(convId, sessionId, is_pinned);
+    
+    if (!result) {
+      console.error('[API] Pin toggle failed - conversation not found or unauthorized');
+      return res.status(404).json({ error: 'Conversation not found or unauthorized.' });
+    }
+    
+    console.log('[API] ✅ Conversation pin toggled successfully:', convId, 'is_pinned:', is_pinned);
+    res.json({ ok: true, is_pinned, message: 'Conversation pin toggled successfully' });
+  } catch (err) {
+    console.error('[API] Toggle pin conversation error:', err);
+    res.status(500).json({ error: 'Failed to toggle pin conversation.' });
+  }
+});
+
 // GET /api/chat/memories — get memories for session
 router.get('/memories', async (req, res) => {
   const sessionId = req.query.session_id;

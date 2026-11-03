@@ -246,8 +246,35 @@ img {
 }
 .conv-item:hover { background: var(--card); color: var(--text); }
 .conv-item.active { background: var(--primary-soft); border-color: rgba(37,99,235,.25); color: var(--primary-light); }
+
+/* Pinned conversation styling */
+.conv-item.pinned {
+  background: var(--primary-soft);
+  border-left: 3px solid var(--primary);
+  padding-left: 9px;
+}
+.conv-item.pinned:hover {
+  background: var(--primary-glow);
+}
+
 .conv-item svg { width: 16px; height: 16px; flex-shrink: 0; }
 .conv-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Pin button */
+.conv-pin {
+  opacity: 0; transition: .15s; width: 20px; height: 20px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; background: transparent;
+  flex-shrink: 0; border: none; cursor: pointer; padding: 0;
+  color: var(--text-tertiary);
+}
+.conv-item:hover .conv-pin { opacity: 1; }
+.conv-item.pinned .conv-pin { opacity: 1; color: #FBBF24; }
+.conv-pin:hover {
+  background: var(--bg-3);
+  color: #FBBF24;
+  transform: scale(1.1);
+}
+
 .conv-del {
   opacity: 0; transition: .15s; width: 20px; height: 20px; border-radius: 4px;
   display: flex; align-items: center; justify-content: center; background: var(--error);
@@ -1153,8 +1180,8 @@ detectParentDarkMode();
 
 window.addEventListener('DOMContentLoaded', () => {
   console.log('========================================');
-  console.log('VELO CHATBOT VERSION: 2.0-FIXED-DELETE');
-  console.log('Build: a1671e0 - Custom Modal for Sandboxed Iframe');
+  console.log('VELO CHATBOT VERSION: 2.1-LISTINGS-PIN');
+  console.log('Build: Listing Persistence + Pin Conversations');
   console.log('========================================');
   console.log('[Velo] ========================================');
   console.log('[Velo] Chatbot initializing...');
@@ -1313,19 +1340,32 @@ async function loadConversations() {
 }
 
 function renderConversations() {
-  const html = CONVERSATIONS.map(c => 
-    `<div class="conv-item ${c.id === CURRENT_CONV_ID ? 'active' : ''}" onclick="loadConversation('${c.id}')">
+  const html = CONVERSATIONS.map(c => {
+    const isPinned = c.is_pinned || false;
+    const pinIcon = isPinned 
+      ? `<svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="14" height="14" style="color:#FBBF24">
+          <path d="M16 2v6h5.5L12 22v-8H6.5L16 2z"/>
+        </svg>`
+      : '';
+    
+    return `<div class="conv-item ${c.id === CURRENT_CONV_ID ? 'active' : ''} ${isPinned ? 'pinned' : ''}" onclick="loadConversation('${c.id}')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
       </svg>
+      ${pinIcon}
       <span class="conv-title">${esc(c.title || 'New conversation')}</span>
+      <button class="conv-pin" onclick="event.stopPropagation(); togglePinConversation('${c.id}')" title="${isPinned ? 'Unpin' : 'Pin'} conversation">
+        <svg viewBox="0 0 24 24" fill="${isPinned ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" width="14" height="14">
+          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+        </svg>
+      </button>
       <button class="conv-del" onclick="event.stopPropagation(); deleteConversation('${c.id}')">
         <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" width="12" height="12">
           <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
         </svg>
       </button>
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
   document.getElementById('convs').innerHTML = html || '<p style="text-align:center;color:var(--text-tertiary);font-size:12px;padding:20px 0;">No conversations yet</p>';
 }
 
@@ -1333,10 +1373,22 @@ async function loadConversation(convId) {
   try {
     const res = await fetch(`${API}/conversations/${convId}/messages?session_id=${SESSION_ID}`);
     const data = await res.json();
-    MESSAGES = data.messages || [];
+    
+    // Map database columns to frontend format
+    // Database stores listings in 'listings_shown', frontend expects 'listings'
+    MESSAGES = (data.messages || []).map(msg => ({
+      role: msg.role,
+      content: msg.content,
+      listings: msg.listings_shown || msg.listings || [], // Support both column names
+      created_at: msg.created_at
+    }));
+    
     CURRENT_CONV_ID = convId;
     renderMessages();
     renderConversations();
+    
+    console.log('[Velo] Loaded conversation with', MESSAGES.length, 'messages');
+    console.log('[Velo] Messages with listings:', MESSAGES.filter(m => m.listings?.length > 0).length);
     
     // Close mobile sidebar
     document.getElementById('hamburger').classList.remove('open');
@@ -1492,6 +1544,57 @@ async function clearAllConversations() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════
+// PIN CONVERSATION
+// ═══════════════════════════════════════════════════════════
+async function togglePinConversation(convId) {
+  console.log('[Velo] togglePinConversation called with ID:', convId);
+  
+  try {
+    // Find the conversation
+    const conv = CONVERSATIONS.find(c => c.id === convId);
+    if (!conv) {
+      console.error('[Velo] Conversation not found:', convId);
+      return;
+    }
+    
+    const wasPinned = conv.is_pinned || false;
+    const newPinnedState = !wasPinned;
+    
+    console.log('[Velo] Toggling pin from', wasPinned, 'to', newPinnedState);
+    
+    // Optimistic update
+    conv.is_pinned = newPinnedState;
+    renderConversations();
+    
+    // Update backend
+    const res = await fetch(`${API}/conversations/${convId}/pin?session_id=${SESSION_ID}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_pinned: newPinnedState })
+    });
+    
+    if (!res.ok) {
+      // Revert on failure
+      conv.is_pinned = wasPinned;
+      renderConversations();
+      console.error('[Velo] Failed to toggle pin');
+      return;
+    }
+    
+    const data = await res.json();
+    console.log('[Velo] ✅ Pin toggled successfully:', data);
+    
+    // Reload conversations to ensure consistency
+    await loadConversations();
+    
+  } catch (err) {
+    console.error('[Velo] Toggle pin error:', err);
+    // Reload to restore correct state
+    loadConversations();
+  }
+}
+
 function newChat() {
   CURRENT_CONV_ID = null;
   MESSAGES = [];
@@ -1541,19 +1644,26 @@ function renderMessage(msg) {
     ? `<div class="msg-av user">Y</div>`
     : `<div class="msg-av assistant">${veloLogo}</div>`;
   
+  // Render listings if they exist
+  const listings = msg.listings || [];
+  const listingsHTML = listings.length > 0
+    ? `<div class="msg-listings">${listings.map(renderListing).join('')}</div>`
+    : '';
+  
   return `
     <div class="msg ${isUser ? 'user-msg' : ''}">
       ${av}
       <div class="msg-body">
         <div class="msg-role">${isUser ? 'You' : 'Velo'}</div>
         <div class="msg-text">${formatText(msg.content)}</div>
+        ${listingsHTML}
       </div>
     </div>
   `;
 }
 
 function appendMessage(role, content, listings = []) {
-  MESSAGES.push({ role, content, created_at: Date.now() });
+  MESSAGES.push({ role, content, listings, created_at: Date.now() });
   
   const $msgs = document.getElementById('messages');
   const isUser = role === 'user';
