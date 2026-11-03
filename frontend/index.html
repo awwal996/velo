@@ -1180,8 +1180,8 @@ detectParentDarkMode();
 
 window.addEventListener('DOMContentLoaded', () => {
   console.log('========================================');
-  console.log('VELO CHATBOT VERSION: 2.1-LISTINGS-PIN');
-  console.log('Build: Listing Persistence + Pin Conversations');
+  console.log('VELO CHATBOT VERSION: 2.1.1-DEBUG');
+  console.log('Build: Added Debug Logging for Conversation Save');
   console.log('========================================');
   console.log('[Velo] ========================================');
   console.log('[Velo] Chatbot initializing...');
@@ -1330,12 +1330,19 @@ function closeDeleteModal() {
 // ═══════════════════════════════════════════════════════════
 async function loadConversations() {
   try {
+    console.log('[Velo] Loading conversations for session:', SESSION_ID);
     const res = await fetch(`${API}/conversations?session_id=${SESSION_ID}`);
     const data = await res.json();
+    console.log('[Velo] Conversations API response:', {
+      status: res.status,
+      ok: res.ok,
+      count: data.conversations?.length || 0,
+      conversations: data.conversations
+    });
     CONVERSATIONS = data.conversations || [];
     renderConversations();
   } catch (err) {
-    console.error('Load convs:', err);
+    console.error('[Velo] Load convs error:', err);
   }
 }
 
@@ -1757,6 +1764,14 @@ async function sendMessage(e) {
       const data = await res.json();
       removeTyping();
 
+      console.log('[Velo] API Response:', {
+        hasError: !!data.error,
+        hasConvId: !!data.conversation_id,
+        hasText: !!data.text,
+        listingsCount: data.listings?.length || 0,
+        convId: data.conversation_id
+      });
+
       if (data.error) {
         // Check if it's a timeout error
         if (data.timeout && attempts < maxAttempts) {
@@ -1769,8 +1784,11 @@ async function sendMessage(e) {
         break;
       } else {
         CURRENT_CONV_ID = data.conversation_id;
+        console.log('[Velo] Set CURRENT_CONV_ID to:', CURRENT_CONV_ID);
         appendMessage('assistant', data.text, data.listings || []);
-        loadConversations();
+        console.log('[Velo] Message appended, loading conversations...');
+        await loadConversations();
+        console.log('[Velo] Conversations loaded, count:', CONVERSATIONS.length);
         break;
       }
     } catch (err) {
